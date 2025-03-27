@@ -1,0 +1,3 @@
+[submodule "xzmjx/themes/nostyleplease"]
+	path = xzmjx/themes/nostyleplease
+	url = https://github.com/hanwenguo/hugo-theme-nostyleplease

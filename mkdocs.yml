@@ -1,0 +1,8 @@
+site_name: My site
+site_url: https://yzmjy.github.io
+theme:
+  name: material
+
+plugins:
+  - search
+  - blog
