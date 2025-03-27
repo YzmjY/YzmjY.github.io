@@ -2,6 +2,7 @@ site_name: XZMJX
 site_url: https://yzmjy.github.io
 theme:
   name: material
+    - navigation.indexes
 
 plugins:
   - search
