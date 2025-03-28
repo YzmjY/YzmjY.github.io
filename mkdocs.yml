@@ -55,6 +55,8 @@ theme:
       toggle:
         icon: material/toggle-switch-off
         name: Switch to system preference
+  icon:
+    annotation: material/eye-circle
 plugins:
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
@@ -138,4 +140,6 @@ nav:
       - ceph_doc/ceph_file_system/index.md
       - "CephFS 概念":
         - ceph_doc/ceph_file_system/cephfs_concepts/mdcache.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/mds-states.md 
+        - ceph_doc/ceph_file_system/cephfs_concepts/posix.md 
     - CEPH架构: ceph_doc/architecture/architecture.md 
