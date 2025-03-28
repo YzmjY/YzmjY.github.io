@@ -16,7 +16,7 @@ up:active
 { .annotate }
 
 1. 每个 CephFS 都有几个 rank ，默认是一个，从 0 起。一个 rank 可看作是一个元数据分片。
-文件系统 rank 数量的控制在 多活 MDS 守护进程的配置 里详述。
+   文件系统 rank 数量的控制在 多活 MDS 守护进程的配置 里详述。
 
 ```
 up:standby
