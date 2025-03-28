@@ -1,8 +1,6 @@
 ---
 date: 2024-12-09
-categories:
-  - CEPH
-draft: false
+title: CEPH架构
 ---
 # CEPH架构
 

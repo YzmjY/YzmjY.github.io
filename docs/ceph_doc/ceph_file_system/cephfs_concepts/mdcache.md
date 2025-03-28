@@ -1,8 +1,6 @@
 ---
 date: 2025-03-27
-categories:
-  - CEPH
-draft: false
+title: 分布式元数据缓存
 ---
 
 # CEPHFS：分布式元数据缓存
