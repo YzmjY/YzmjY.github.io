@@ -135,7 +135,7 @@ nav:
   - CEPH文档翻译:
     - ceph_doc/index.md
     - CEPH文件系统:
-      - ceph_doc/index.md
+      - ceph_doc/ceph_file_system/index.md
       - "CephFS 概念":
         - ceph_doc/ceph_file_system/cephfs_concepts/mdcache.md
     - CEPH架构: ceph_doc/architecture/architecture.md 
