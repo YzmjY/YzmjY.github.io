@@ -43,14 +43,107 @@ CephFS使用Journal日志功能基于以下理由：
 11. EVENT_SUBTREEMAP：目录 inode 到目录内容（子树分区）的映射。
 12. EVENT_TABLECLIENT: Log transition states of MDSs view of client tables (snap/anchor).
 13. EVENT_TABLESERVER: Log transition states of MDSs view of server tables (snap/anchor).
-14. EVENT_UPDATE：对 inode 执行日志文件作。
+14. EVENT_UPDATE：对 inode 执行操作日志文件。
 15. EVENT_SEGMENT：记录新的Journal段边界。
 16. EVENT_LID：标记没有逻辑子树映射的日志的开头。
 
 ## Journal段
+MDS的Journal有多个逻辑段组成，在代码中被称为LogSegment。这些段用于将元数据更新的多个事件组合
+成一个逻辑单元，Journal修剪以这样的一个逻辑单元进行。每当MDS尝试提交元数据操作（例如将文件创建
+作为omap更新到dirfrag对象）时，它会在一系列更新元数据对象的过程中以可回放的批量更新方式执行这
+些更新。更新必须是可回放的，以防MDS在对不同的元数据对象的一系列更新过程中崩溃。通过批量更新的方
+式，可以将对同一个元数据对象的多个更新合并到一个更新中（dirfrag），其中多个omap条目可能在同一
+时间段内被更新。
 
+当一个Journal逻辑段被trim后，它被标记为"过期的"。过期的Journal段可以被journaler安全的删除，
+因为其所有元数据更新操作都已经被持久化到对应的RADOS对象中。通过更新journaler的"expire position"
+来将对应的过期Journal段标记为过期。一些过期的Journal段可能会被保留，以提高MDS在重启时的缓存局部
+性。
 
- 
+在 CephFS 的大部分历史中（直到 2023 年），Journal Segment由子树映射，（ESubtreeMap 事件）
+为分界点。这样做的主要原因是，在重播任何其他事件之前，Journal恢复必须从子树 map 的副本开始。
+
+Now, log segments can be delineated by events which are a SegmentBoundary. These include, ESubtreeMap, EResetJournal, ESegment (2023), or ELid (2023). For ESegment, this light-weight segment boundary allows the MDS to journal the subtree map less frequently while also keeping the journal segments small to keep trimming events short. In order to maintain the constraint that the first event journal replay sees is the ESubtreeMap, those segments beginning with that event are considered “major segments” and a new constraint was added to the deletion of expired segments: the first segment of the journal must always be a major segment.
+现在，Journal Segment可以以 `SegmentBoundary` 类的事件作为边界点。包括 `ESubtreeMap`、
+`EResetJournal`、`ESegment` （2023） 或 `ELid` （2023 年）。对于 `ESegment`，这种轻量
+级的 segment 边界允许 MDS 降低记录子树映射的频率，同时保持日志 segment 较小以保持修剪事件简
+短。为了维护 event journal r  eplay 看到的第一个 constraint 是 ESubtreeMap，那些以该事件开头的 segment 被认为是 “major segments”，并且添加了一个新的 constraint 来删除过期的 segment：日志的第一个 segment 必须始终是 major segment。
+
+The ELid event exists to mark the MDS journal as “new” where a logical LogSegment and log sequence number is required for other operations to proceed, in particular the MDSTable operations. The MDS uses this event when creating a rank or shutting it down. No subtree map is required when replaying the rank from this initial state.
+ELid 事件的存在是为了将 MDS 日志标记为 “new”，其中逻辑 其他作需要 LogSegment 和日志序列号才能继续，尤其是 MDSTable 作。MDS 在创建排名或关闭排名时使用此事件。从此初始状态重放排名时，不需要子树映射。
+
+## 配置
+日志分段的目标大小（以事件数量而言）由以下参数控制：
+
+mds_log_events_per_segment
+maximum number of events in an MDS journal segment
+MDS 日志段中的最大事件数
+
+type
+  类型
+:
+uint
+
+default
+  违约
+:
+1024  1024 元
+
+min
+  分钟
+:
+1
+
+The number of minor mds log segments since last major segment is controlled by:
+自上一个主要 Segment 以来的次要 mds 日志 Segment 的数量由以下因素控制：
+
+mds_log_minor_segments_per_major_segment
+The number of minor mds log segments since last major segment after which a major segment is started/logged.
+自上一个主要分段以来的次要 mds 日志分段数，在此之后启动/记录主要分段。
+
+type
+  类型
+:
+uint
+
+default
+  违约
+:
+16
+
+min
+  分钟
+:
+4
+
+This controls how often the MDS trims expired log segments (higher the value, less often the MDS updates the journal expiry position for trimming).
+这控制 MDS 修剪过期日志段的频率（值越高，MDS 更新日志过期位置以进行修剪的频率越低）。
+
+The target maximum number of segments is controlled by:
+目标最大区段数由以下因素控制：
+
+mds_log_max_segments
+The maximum number of segments (objects) in the journal before we initiate trimming. Set to -1 to disable limits.
+开始修剪之前，日志中的最大段 （对象） 数。设置为 -1 可禁用限制。
+
+type
+  类型
+:
+uint
+
+default
+  违约
+:
+128  票价 128 元
+
+min
+  分钟
+:
+8
+
+The MDS will often sit a little above this number due to non-major segments awaiting trimming up to the next major segment.
+由于非主要细分市场等待修剪到下一个主要细分市场，MDS 通常会略高于这个数字。mds_log_events_per_segment
+
 
 
  

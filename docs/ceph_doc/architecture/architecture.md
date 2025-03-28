@@ -8,8 +8,6 @@ title: CEPH架构
 
 ![](../image/ceph_architecture.png)
 
-<!-- more -->
-
 ## CEPH 集群
 
 Ceph 提供基于 RADOS 的无限可扩展 [存储集群](https://docs.ceph.com/en/reef/glossary/#term-Ceph-Storage-Cluster)，RADOS 是一种可靠的分布式存储服务，它使用每个存储节点中的智能守护进程来保护其存储的数据，并将该数据提供给[客户端](https://docs.ceph.com/en/reef/glossary/#term-Client)。有关 RADOS 的简要说明，请参阅 Sage Weil 的“[RADOS 对象存储](https://ceph.io/en/news/blog/2009/the-rados-distributed-object-store/)”博客文章，参阅[ RADOS - 适用于 PB 级存储集群的可扩展、可靠的存储服务](https://ceph.io/assets/pdfs/weil-rados-pdsw07.pdf)，了解有关 [RADOS](https://docs.ceph.com/en/reef/glossary/#term-RADOS) 的详尽说明。
