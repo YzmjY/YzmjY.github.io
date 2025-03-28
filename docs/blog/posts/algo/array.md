@@ -1,11 +1,14 @@
 ---
-date: 2025-03-21
+date: 2024-12-01
 categories:
   - 刷题
 draft: false
 ---
 
 # Array
+数组是最为常见的一种数据结构。
+
+<!-- more -->
 
 ## 排序算法
 
