@@ -143,4 +143,5 @@ nav:
         - ceph_doc/ceph_file_system/cephfs_concepts/mds-states.md 
         - ceph_doc/ceph_file_system/cephfs_concepts/posix.md 
         - ceph_doc/ceph_file_system/cephfs_concepts/mds-journaling.md 
+        - ceph_doc/ceph_file_system/cephfs_concepts/file-layouts.md 
     - CEPH架构: ceph_doc/architecture/architecture.md 

@@ -1,6 +1,6 @@
 ---
 date: 2025-03-27
-title: MDS日志记录
+title: MDS Journal
 ---
 
 # MDS Journal
