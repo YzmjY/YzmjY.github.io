@@ -7,7 +7,6 @@ title: CEPHFS IO路径
 CephFS 中的所有文件数据都存储为 RADOS 对象。CephFS 客户端可以直接访问 RADOS 以作文件数据。
 MDS 仅处理元数据作。
 
-
 要读/写 CephFS 文件，客户端需要具有相应 inode 的 *file read/write* Caps。如果客户端没有
 所需的Caps，它会向 MDS 发送“Cap 消息”，告诉 MDS 它想要什么。MDS 会根据情况判断是否可以赋予
 客户端对应的Caps。一旦客户端具有 *file read/write* Caps，它就可以直接访问 RADOS 以读/写
