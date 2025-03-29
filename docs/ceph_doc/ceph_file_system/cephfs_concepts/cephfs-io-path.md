@@ -17,3 +17,6 @@ MDS 仅处理元数据作。
 端缓存可以满足文件读取。*file buffer* Cap意味着文件写入可以在客户端缓存中缓冲。
 
 ![IO 路径](../../image/cephfs-io-path.png)
+
+
+
