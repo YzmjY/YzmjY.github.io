@@ -139,9 +139,17 @@ nav:
     - CEPH文件系统:
       - ceph_doc/ceph_file_system/index.md
       - "CephFS 概念":
-        - ceph_doc/ceph_file_system/cephfs_concepts/mdcache.md
         - ceph_doc/ceph_file_system/cephfs_concepts/mds-states.md 
         - ceph_doc/ceph_file_system/cephfs_concepts/posix.md 
         - ceph_doc/ceph_file_system/cephfs_concepts/mds-journaling.md 
         - ceph_doc/ceph_file_system/cephfs_concepts/file-layouts.md 
+        - ceph_doc/ceph_file_system/cephfs_concepts/mdcache.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/dynamic-metadata-mangement.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/cephfs-io-path.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/charmap.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/lazyio.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/dirfrags.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/multimds.md
+        - ceph_doc/ceph_file_system/cephfs_concepts/snapshots.md
+
     - CEPH架构: ceph_doc/architecture/architecture.md 
