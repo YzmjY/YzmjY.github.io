@@ -6,35 +6,25 @@ title: MDS Journal
 # MDS Journal
 
 ## CEPHFS元数据池
-CephFS使用一个与数据池隔离的存储池来管理文件系统的元数据（inodes和dentries），该元数据池包含
-文件系统层级关系在内的所有文件元信息。除此之外，它还保存一些与文件系统中其他部分相关联的元数据，
-例如对文件系统操作的日志记录、打开文件句柄表、客户端链接session表等内容。
+CephFS使用一个与数据池隔离的存储池来管理文件系统的元数据（inodes和dentries），该元数据池包含文件系统层级关系在内的所有文件元信息。除此之外，它还保存一些与文件系统中其他部分相关联的元数据，例如对文件系统操作的日志记录、打开文件句柄表、客户端链接session表等内容。
 
 本文档描述了MDS如何使用和回放元数据的操作日志记录。
 
 ## Journal记录
-MDS在执行文件元数据操作之前，会将对应的元数据事件日志以RADOS对象的形式流式传输到元数据池中。处
-于Active状态的MDS进程管理CephFS中的文件和目录的元数据。
+MDS在执行文件元数据操作之前，会将对应的元数据事件日志以RADOS对象的形式流式传输到元数据池中。处于Active状态的MDS进程管理CephFS中的文件和目录的元数据。
 
 CephFS使用Journal功能基于以下理由：
 
-1. 一致性： 在MDS故障转移时，可以通过重放Journal中的操作事件来是文件系统的状态达到一致。另外，
-   记录对元数据存储进行多次更新的复杂操作的操作事件，以保证崩溃一致性（以及其他一致性，例如锁等）。
+1. 一致性： 在MDS故障转移时，可以通过重放Journal中的操作事件来是文件系统的状态达到一致。另外，记录对元数据存储进行多次更新的复杂操作的操作事件，以保证崩溃一致性（以及其他一致性，例如锁等）。
 
-2. 性能：Journal的写入是顺序的，因此该操作的速度很快。另外，可以将更新事件合并到一次日志写入中,
-   从而节省更新文件不同部分所涉及的磁盘查找事件。Journal同样有利于备用MDS进行缓存的预热，
-   这在MDS故障转移快速恢复时提供一定的帮助。
+2. 性能：Journal的写入是顺序的，因此该操作的速度很快。另外，可以将更新事件合并到一次日志写入中,从而节省更新文件不同部分所涉及的磁盘查找事件。Journal同样有利于备用MDS进行缓存的预热，这在MDS故障转移快速恢复时提供一定的帮助。
 
-每个Active的MDS在元数据池中维护自身的Journal日志。Journal日志被条带化为多个Rados对象。过期
-的Journal条目将会在合适的时机被删除。
+每个Active的MDS在元数据池中维护自身的Journal日志。Journal日志被条带化为多个Rados对象。过期的Journal条目将会在合适的时机被删除。
 
 ## Journal 事件
-除了记录文件系统元数据更新，CephFS Journal 还记录了其它各种事件，例如客户端会话信息和目录导入、
-导出状态等。这些事件被 MDS 用来根据需要重新建立正确的状态，例如，通过重放Journal事件，如果存在
-特定事件类型指定了一个客户端在MDS 重启之前与其建立了会话，则 MDS 在重启时会尝试重新连接该客户端,
+除了记录文件系统元数据更新，CephFS Journal 还记录了其它各种事件，例如客户端会话信息和目录导入、导出状态等。这些事件被 MDS 用来根据需要重新建立正确的状态，例如，通过重放Journal事件，如果存在特定事件类型指定了一个客户端在MDS 重启之前与其建立了会话，则 MDS 在重启时会尝试重新连接该客户端,
 
-为了检查日志中记录的此类事件的列表，CephFS 提供了一个命令行实用程序 cephfs-journal-tool，
-其使用方式如下：
+为了检查日志中记录的此类事件的列表，CephFS 提供了一个命令行实用程序 cephfs-journal-tool，其使用方式如下：
 
 ```
 cephfs-journal-tool --rank=<fs>:<rank> event get list
@@ -62,31 +52,15 @@ cephfs-journal-tool）
 16. EVENT_LID：标记没有逻辑子树映射的日志的开头。
 
 ## Journal段
-MDS的Journal有多个逻辑段组成，在代码中被称为LogSegment。这些段用于将元数据更新的多个事件组合
-成一个逻辑单元，Journal修剪以这样的一个逻辑单元进行。每当MDS尝试提交元数据操作（例如将文件创建
-作为omap更新到dirfrag对象）时，它会在一系列更新元数据对象的过程中以可回放的批量更新方式执行这
-些更新。更新必须是可回放的，以防MDS在对不同的元数据对象的一系列更新过程中崩溃。通过批量更新的方
-式，可以将对同一个元数据对象的多个更新合并到一个更新中（dirfrag），其中多个omap条目可能在同一
-时间段内被更新。
+MDS的Journal有多个逻辑段组成，在代码中被称为LogSegment。这些段用于将元数据更新的多个事件组合成一个逻辑单元，Journal修剪以这样的一个逻辑单元进行。每当MDS尝试提交元数据操作（例如将文件创建作为omap更新到dirfrag对象）时，它会在一系列更新元数据对象的过程中以可回放的批量更新方式执行这些更新。更新必须是可回放的，以防MDS在对不同的元数据对象的一系列更新过程中崩溃。通过批量更新的方式，可以将对同一个元数据对象的多个更新合并到一个更新中（dirfrag），其中多个omap条目可能在同一时间段内被更新。
 
-当一个Journal逻辑段被trim后，它被标记为"过期的"。过期的Journal段可以被journaler安全的删除，
-因为其所有元数据更新操作都已经被持久化到对应的RADOS对象中。通过更新journaler的"expire position"
-来将对应的过期Journal段标记为过期。一些过期的Journal段可能会被保留，以提高MDS在重启时的缓存局部
-性。
+当一个Journal逻辑段被trim后，它被标记为"过期的"。过期的Journal段可以被journaler安全的删除，因为其所有元数据更新操作都已经被持久化到对应的RADOS对象中。通过更新journaler的"expire position"来将对应的过期Journal段标记为过期。一些过期的Journal段可能会被保留，以提高MDS在重启时的缓存局部性。
 
-在 CephFS 的大部分历史中（直到 2023 年），Journal Segment由子树映射（ESubtreeMap 事件）
-为分界点。这样做的主要原因是，在重播任何其他事件之前，Journal恢复必须从子树 map 的副本开始。
+在 CephFS 的大部分历史中（直到 2023 年），Journal Segment由子树映射（ESubtreeMap 事件）为分界点。这样做的主要原因是，在重播任何其他事件之前，Journal恢复必须从子树 map 的副本开始。
 
-现在，Journal Segment可以以 `SegmentBoundary` 类的事件作为边界点。包括 `ESubtreeMap`、
-`EResetJournal`、`ESegment` （2023） 或 `ELid` （2023 年）。对于 `ESegment`，这种轻量
-级的 segment 边界允许 MDS 降低记录子树映射的频率，同时保持日志 segment 较小以保持修剪事件简
-短。为了保证 journal 重放看到的第一个事件是 `ESubtreeMap`，那些以该事件开头的 segment 被认
-为是 “major segments”，并且为删除过期的 segment 增加了一个限制：Journal的第一个 segment 
-必须始终是 major segment。
+现在，Journal Segment可以以 `SegmentBoundary` 类的事件作为边界点。包括 `ESubtreeMap`、`EResetJournal`、`ESegment` （2023） 或 `ELid` （2023 年）。对于 `ESegment`，这种轻量级的 segment 边界允许 MDS 降低记录子树映射的频率，同时保持日志 segment 较小以保持修剪事件简短。为了保证 journal 重放看到的第一个事件是 `ESubtreeMap`，那些以该事件开头的 segment 被认为是 “major segments”，并且为删除过期的 segment 增加了一个限制：Journal的第一个 segment 必须始终是 major segment。
 
-`ELid` 事件的存在是为了将 MDS 日志标记为 “new”，其他操作需要 LogSegment 和日志序列号才能继
-续，尤其是 MDSTable 操作。MDS 在创建排名或关闭Rank时使用此事件。从此初始状态重放Rank时，不需
-要子树映射。
+`ELid` 事件的存在是为了将 MDS 日志标记为 “new”，其他操作需要 LogSegment 和日志序列号才能继续，尤其是 MDSTable 操作。MDS 在创建排名或关闭Rank时使用此事件。从此初始状态重放Rank时，不需要子树映射。
 
 ## 配置
 日志分段的目标大小（以事件数量而言）由以下参数控制：
