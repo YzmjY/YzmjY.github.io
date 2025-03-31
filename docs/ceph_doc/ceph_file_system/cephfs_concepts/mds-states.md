@@ -3,7 +3,7 @@ date: 2025-03-27
 title: MDS状态
 ---
 # MDS 状态
-元数据服务器 （MDS） 在 CephFS 中的正常工作期间会经历多种状态。例如，某些状态标识 MDS 正在从MDS 的上一个实例的故障转移中恢复。在这里，我们将记录所有这些状态，并通过一个状态图来说明各种状态之间的转换关系。
+元数据服务器 （MDS） 在 CephFS 中的正常工作期间会经历多种状态。例如，某些状态标识 MDS 正在从MDS 的上一个实例的故障转移中恢复。本文将记录所有这些状态，并通过一个状态图来说明各种状态之间的转换关系。
 
 ## 状态描述
 ### 常见状态
@@ -24,28 +24,28 @@ up:standby
 ```
 up:standby_replay
 ``` 
-处于该状态的 MDS 正在跟踪另一个处于 `up:active` 状态的MDS的日志，如果跟踪的MDS发生故障，则该 MDS 可以更快的接管服务。同时也存在一定的缺点：它们不能接管除跟踪的 MDS 之外的故障 MDS 服务。
+处于该状态的 MDS 正在跟踪另一个处于 `up:active` 状态的MDS的Journal，如果跟踪的 MDS 发生故障，则该 MDS 可以更快的接管服务。但也存在一定的缺点：它们不能接管除跟踪的 MDS 之外的故障 MDS 进程。
 
 ### 不太常见的或暂时的状态
 ```
 up:boot
 ```
-此状态在 MDS 启动期间广播到 MON。此状态永远不会可见，因为 MON 会立即将 MDS 分配给可用 Rank 或命令 MDS 加入 `standby`队列运行。但为了完整起见，此处记录了该状态。
+该状态在 MDS 启动期间广播到 MON。此状态永远不会对外可见，因为 MON 会立即将 MDS 分配给可用 Rank 或命令 MDS 加入 `standby` 队列运行。但为了完整起见，此处记录了该状态。
 
 ```
 up:creating
 ```
-MDS 通过构建一些每个 Rank 的元数据（如日志）并加入 MDS 集群来创建新的 Rank（可能是rank 0）。
+该状态表示 MDS 正在为一个新的 Rank（可能是Rank0） 创建元数据（例如Journal），并加入到 MDS 集群。 
 
 ```
 up:starting
 ```
-MDS 正在重新启动已停止的 Rank ,它将打开 Rank 关联的元数据并加入MDS集群。
+该状态表示 MDS 正在重新启动已停止的 Rank ,它将打开 Rank 关联的元数据并加入MDS集群。
 
 ```
 up:stopping
 ```
-当 Rank 停止时，MON 命令活动 MDS 进入 `up：stopping` 状态。在此状态下，MDS 不接受新的客户端连接，将所有子树迁移到文件系统中的其他Rank，刷新其元数据日志，如果是最后一个 Rank (0)，则驱逐所有客户端并关闭（另请参阅 CephFS 管理命令）。
+当 Rank 停止时，MON 命令对于的Active MDS 进入该状态。在此状态下，MDS 不接受新的客户端连接，将所有该Rank对于的子树迁移到文件系统中的其他Rank，刷新其元数据日志，如果是最后一个 Rank (0)，则将驱逐所有客户端并关闭（另请参阅 CephFS 管理命令）。
 
 ```
 up:replay
@@ -55,7 +55,7 @@ MDS 接管失败的Rank。此状态表示 MDS 正在恢复其日志和其他元�
 ```
 up:resolve
 ```
-如果 Ceph 文件系统有多个 Rank（包括这个Rank），即它不是单活 MDS 集群，则 MDS 会从 `up:replay` 进入此状态。MDS 正在解决任何未提交的 MDS 操作。文件系统中的所有 Rank 都必须处于此状态或更高状态才能进行，即任何 Rank 都不能失败/损坏或 `up:replay`。
+如果 Ceph 文件系统有多个 Rank（包括这个Rank），即它不是单活 MDS 集群，则 MDS 会从 `up:replay` 进入此状态。表示MDS 正在解决任何未提交的 MDS 操作。文件系统中的所有 Rank 都必须处于此状态或更高状态才能进行，即任何 Rank 都不能失败/损坏或 `up:replay`。
 
 ```
 up:reconnect
