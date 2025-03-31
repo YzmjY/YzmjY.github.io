@@ -1,8 +1,6 @@
 ---
 date: 2024-12-01
-categories:
-  - 刷题
-draft: false
+draft: true
 ---
 
 # Array
