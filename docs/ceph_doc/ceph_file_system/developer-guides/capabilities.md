@@ -8,7 +8,7 @@ title: 客户端权限
 当客户端想要操作 inode 时，它会以各种方式去查询 MDS，从而获取一组Caps，以保证客户端安全的在 inode 上进行操作。与其他网络文件系统（例如 NFS 或 SMB）相比，CephFS 中的能力非常精细，并且可能有多个客户端在同一 inode 上持有不同的Caps。
 
 ## Caps 类型
-下面是一些通用的Caps比特位，代表可以不同Caps可以进行的操作：
+下面是一些通用的Caps比特位，代表不同Caps对应的能力：
 
 ```
 /* generic cap bits */
@@ -22,7 +22,9 @@ title: 客户端权限
 #define CEPH_CAP_GLAZYIO   128  /* (file) client can perform lazy io (l) */
 ```
 
-而后这些通用的比特位被移动了特定的位数，代表inode的数据或元数据的哪些部分被授予了对应类型的Caps。
+而后这些通用的比特位被移动了特定的位数，代表对应的Caps能力是针对inode的数据或元数据的哪些部分。
+
+> 可以理解为前者定义了Caps的权限，后者定义了Caps的权限作用的对象。
 
 ```
 /* per-lock shift */
@@ -46,43 +48,55 @@ title: 客户端权限
 #define CEPH_CAP_AUTH_SHARED  (CEPH_CAP_GSHARED  << CEPH_CAP_SAUTH)
 ```
 
-These bits can then be or’ed together to make a bitmask denoting a set of capabilities.
+可以通过将这些常量通过或运算来生成一个bitmask，以表示一组Caps。
 
-There is one exception:
+下面是一个例外：
 
+```
 #define CEPH_CAP_PIN  1  /* no specific capabilities beyond the pin */
-The “pin” just pins the inode into memory, without granting any other caps.
+```
 
-Graphically:
+"pin" 只是将inode固定到内存中，而不授予任何其他Caps。
 
+图形化表示如下：:
+
+```
 +---+---+---+---+---+---+---+---+
 | p | _ |As   x |Ls   x |Xs   x |
 +---+---+---+---+---+---+---+---+
 |Fs   x   c   r   w   b   a   l |
 +---+---+---+---+---+---+---+---+
-The second bit is currently unused.
+```
 
-Abilities granted by each cap
-While that is how capabilities are granted (and communicated), the important bit is what they actually allow the client to do:
+第二个bit目前未使用。
 
-PIN: This just pins the inode into memory. This is sufficient to allow the client to get to the inode number, as well as other immutable things like major or minor numbers in a device inode, or symlink contents.
+## 每个Caps授予的能力
 
-AUTH: This grants the ability to get to the authentication-related metadata. In particular, the owner, group and mode. Note that doing a full permission check may require getting at ACLs as well, which are stored in xattrs.
+上述描述了如何授予Caps（以及表达），但更为关键的是获取对应Caps的客户端可以做哪些操作：
+
+- PIN: 将inode固定到内存中。这允许客户端获取inode编号，以及其他不可变的东西，如设备inode中的major或minor数字，或符号链接的内容。
+
+- AUTH: 允许客户端获取与身份验证相关的元数据。特别是所有者、组和模式。请注意，执行完整的权限检查可能还需要访问ACL，这些ACL存储在xattrs中。
 
 LINK: The link count of the inode.
+- LINK: 允许客户端操作inode的链接计数。
 
 XATTR: Ability to access or manipulate xattrs. Note that since ACLs are stored in xattrs, it’s also sometimes necessary to access them when checking permissions.
+- XATTR: 允许客户端访问或操作xattrs。请注意，由于ACL存储在xattrs中，因此在检查权限时可能还需要访问它们。
 
-FILE: This is the big one. This allows the client to access and manipulate file data. It also covers certain metadata relating to file data -- the size, mtime, atime and ctime, in particular.
+- FILE: 这个是最重要的。这允许客户端访问和操作文件数据。它还包括与文件数据相关的某些元数据，特别是大小、mtime、atime和ctime。 
 
-Shorthand
-Note that the client logging can also present a compact representation of the capabilities. For example:
+## 简写
+客户端在日志中可能会呈现Cap的简写表示。例如：
 
+```
 pAsLsXsFs
-The ‘p’ represents the pin. Each capital letter corresponds to the shift values, and the lowercase letters after each shift are for the actual capabilities granted in each shift.
+```
 
-The relation between the lock states and the capabilities
-In MDS there are four different locks for each inode, they are simplelock, scatterlock, filelock and locallock. Each lock has several different lock states, and the MDS will issue capabilities to clients based on the lock state.
+`p` 表示PIN。 每个大写字母对应于移位值，每个移位后接的小写字母表示每个移位中授予的实际能力。
+
+## 锁状态与Caps的关系
+在MDS中，每个inode都有四个不同的锁，它们是simplelock、scatterlock、filelock和locallock。每个锁有几个不同的锁状态，MDS将根据锁状态向客户端授予Caps。
 
 In each state the MDS Locker will always try to issue all the capabilities to the clients allowed, even some capabilities are not needed or wanted by the clients, as pre-issuing capabilities could reduce latency in some cases.
 
