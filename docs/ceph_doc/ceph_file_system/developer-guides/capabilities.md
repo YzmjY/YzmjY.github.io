@@ -87,7 +87,7 @@ XATTR: Ability to access or manipulate xattrs. Note that since ACLs are stored i
 - FILE: 这个是最重要的。这允许客户端访问和操作文件数据。它还包括与文件数据相关的某些元数据，特别是大小、mtime、atime和ctime。 
 
 ## 简写
-客户端在日志中可能会呈现Cap的简写表示。例如：
+客户端在日志中可能会呈现Caps的简写表示。例如：
 
 ```
 pAsLsXsFs
@@ -98,13 +98,16 @@ pAsLsXsFs
 ## 锁状态与Caps的关系
 在MDS中，每个inode都有四个不同的锁，它们是simplelock、scatterlock、filelock和locallock。每个锁有几个不同的锁状态，MDS将根据锁状态向客户端授予Caps。
 
-In each state the MDS Locker will always try to issue all the capabilities to the clients allowed, even some capabilities are not needed or wanted by the clients, as pre-issuing capabilities could reduce latency in some cases.
+在 MDS Locker的每个状态下，MDS Locker 总是会尝试向客户端授予所有允许的Caps，即使客户端不需要某些Caps，因为预先授予能力可能会在某些情况下减少延迟。
 
 If there is only one client, usually it will be the loner client for all the inodes. While in multiple clients case, the MDS will try to calculate a loner client out for each inode depending on the capabilities the clients (needed | wanted), but usually it will fail. The loner client will always get all the capabilities.
 
+
 The filelock will control files’ partial metadatas’ and the file contents’ access permissions. The metadatas include mtime, atime, size, etc.
+filelock 控制文件的部分元数据和文件内容的访问权限。元数据包括mtime、atime、size等。
 
 Fs: Once a client has it, all other clients are denied Fw.
+- Fs: 
 
 Fx: Only the loner client is allowed this capability. Once the lock state transitions to LOCK_EXCL, the loner client is granted this along with all other file capabilities except the Fl.
 
