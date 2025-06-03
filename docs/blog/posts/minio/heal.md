@@ -471,3 +471,77 @@ MINIO提供Admin API，进行手动触发数据恢复。
 恢复任务的执行
 
 在创建一个Seq之后，会将Seq放入globalAllHealState的全局表中，并同时启动一个后台routine，该routine执行遍历操作，对给定的path进行遍历，获取所有的bucket，将bucket恢复任务交由globalBackgroundHealRoutine处理；同时更新Seq中的修复状态。
+
+## 验证
+### 读取分片缺失的Object
+
+通过S3API，分片上传1GB的文件，分片大小指定为64MB。
+
+![object](./images/minio_heal_full.png)
+
+查看xl.meta数据，确定其数据分片与校验码分片分布：
+
+```json
+{
+  "Versions": [
+    {
+      "Metadata": {
+         ...
+        "Type": 1,
+        "V2Obj": {
+          "CSumAlgo": 1,
+          "DDir": "jTuTge1vSGWY5WTxb39pQw==",
+          "EcAlgo": 1,
+          "EcBSize": 1048576,
+          "EcDist": [
+            2,
+            3,
+            1
+          ],
+          "EcIndex": 2,
+          "EcM": 2,
+          "EcN": 1,
+          "ID": "AAAAAAAAAAAAAAAAAAAAAA==",
+          "MTime": 1748331420006011629
+          ...
+      }
+    }
+  ]
+}
+```
+
+可见其数据分片在3,1号节点上，校验分片在2号节点上。
+
+- 删除3号节点部分数据，验证数据分片损坏，GET请求会修复数据。
+
+删除部分part:
+
+![delete-data-shard](./images/minio_heal_delete_data_part.png)
+
+通过S3API 触发GET请求，读取成功。
+
+查看目标节点上分片数据，已恢复：
+
+![recover-data-shard](./images/minio_heal_delete_data_part_recovery.png)
+
+- 删除2号节点部分数据，验证校验分片损坏，不会进行修复。
+
+删除部分part:
+
+![delete-check-shard](./images/minio_heal_delete_parity_part.png)
+
+通过S3API 触发GET请求，读取成功。
+
+查看目标节点上分片数据，未恢复：
+
+![recover-check-shard](./images/minio_heal_delete_parity_part_no_recovery.png)
+
+### 验证手动恢复
+
+对上述校验分片缺失的bucket手动执行heal操作：
+
+![mc-admin-heal](./images/mc_admin_heal_ops.png)
+
+查看目标节点上分片数据，已恢复：
+
+![mc-admin-heal-recovery](./images/mc_admin_heal_result.png)
