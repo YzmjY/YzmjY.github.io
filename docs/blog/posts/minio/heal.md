@@ -20,24 +20,26 @@ MINIO会在以下情况下，触发数据修复流程：
 
 <!-- more -->
 
-- GET请求期间
+### GET请求期间
+
   MinIO 会在每次使用 GET 或 HEAD 操作请求对象时，自动检查对象数据分片的一致性。对于受版本控制的存储桶，MinIO 还会在 PUT 操作作期间检查一致性。
 
   如果发现所有数据分片都完好无损，则 MinIO 将根据数据分片返回对象数据，而不检查相应的奇偶校验分片。
 
   如果对象的数据分片缺失或损坏，则 MinIO 会使用可用的奇偶校验分片计算对象数据进行返回（同时将数据修复任务加入mrf修复序列中，异步执行Object修复）。每个丢失或损坏的数据分片都必须有一个完整的奇偶校验分片可用，否则无法恢复对象。如果任何奇偶校验分片丢失或损坏，MinIO 将恢复奇偶校验分片，前提是有足够的其他奇偶校验分片来为对象提供服务。
 
-- Scanner扫描期间
+### Scanner扫描期间
 
-  !!! note
+!!! note
 
-      代码存在BUG，导致Scanner子系统永远不会触发数据修复。
+    代码存在BUG，导致Scanner子系统永远不会触发数据修复。
 
   MinIO 使用对象扫描程序来执行许多与对象相关的任务。其中一项任务会检查对象的完整性，如果发现对象已损坏或损坏，则会修复它们。
   在每次扫描过程中，MinIO 使用对象名称的哈希值与scanner周期数做取模计算，默认每个Object会在每1024轮被选中，执行Heal操作。
   如果发现任何对象丢失了分片，MinIO 会从可用分片中修复该对象。默认情况下，MinIO 不使用扫描程序检查bitrot损坏。这可能是一个比较重的操作，并且跨多个磁盘的bitrot的风险很低。
 
-- 手动触发
+### 手动触发
+
   管理员可以使用 `mc admin heal` 启动完整的系统修复。该程序非常耗费资源，通常不需要。
 
 ## 实现
@@ -49,12 +51,12 @@ MINIO的数据恢复能力都是构建在这几个核心的API之上的，有些
 // ObjectLayer implements primitives for object API layer.
 type ObjectLayer interface {
 // ...
-        // Healing operations.
-        HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error)
-        HealBucket(ctx context.Context, bucket string, opts madmin.HealOpts) (madmin.HealResultItem, error)
-        HealObject(ctx context.Context, bucket, object, versionID string, opts madmin.HealOpts) (madmin.HealResultItem, error)
-        HealObjects(ctx context.Context, bucket, prefix string, opts madmin.HealOpts, fn HealObjectFn) error
-        CheckAbandonedParts(ctx context.Context, bucket, object string, opts madmin.HealOpts) error
+  // Healing operations.
+  HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error)
+  HealBucket(ctx context.Context, bucket string, opts madmin.HealOpts) (madmin.HealResultItem, error)
+  HealObject(ctx context.Context, bucket, object, versionID string, opts madmin.HealOpts) (madmin.HealResultItem, error)
+  HealObjects(ctx context.Context, bucket, prefix string, opts madmin.HealOpts, fn HealObjectFn) error
+  CheckAbandonedParts(ctx context.Context, bucket, object string, opts madmin.HealOpts) error
 // ...
 }
 ```
@@ -72,57 +74,57 @@ HealObject从Pool层开始调用，并发请求每个Pool，每个Pool内按照h
 
 ```go
 type healSequence struct {
-        // bucket, and object on which heal seq. was initiated
-        bucket, object string
+    // bucket, and object on which heal seq. was initiated
+    bucket, object string
 
-        // Report healing progress
-        reportProgress bool
+    // Report healing progress
+    reportProgress bool
 
-        // time at which heal sequence was started
-        startTime time.Time
+    // time at which heal sequence was started
+    startTime time.Time
 
-        // time at which heal sequence has ended
-        endTime time.Time
+    // time at which heal sequence has ended
+    endTime time.Time
 
-        // Heal client info
-        clientToken, clientAddress string
+    // Heal client info
+    clientToken, clientAddress string
 
-        // was this heal sequence force started?
-        forceStarted bool
+    // was this heal sequence force started?
+    forceStarted bool
 
-        // heal settings applied to this heal sequence
-        settings madmin.HealOpts
+    // heal settings applied to this heal sequence
+    settings madmin.HealOpts
 
-        // current accumulated status of the heal sequence
-        currentStatus healSequenceStatus
+    // current accumulated status of the heal sequence
+    currentStatus healSequenceStatus
 
-        // channel signaled by background routine when traversal has
-        // completed
-        traverseAndHealDoneCh chan error
+    // channel signaled by background routine when traversal has
+    // completed
+    traverseAndHealDoneCh chan error
 
-        // canceler to cancel heal sequence.
-        cancelCtx context.CancelFunc
+    // canceler to cancel heal sequence.
+    cancelCtx context.CancelFunc
 
-        // the last result index sent to client
-        lastSentResultIndex int64
+    // the last result index sent to client
+    lastSentResultIndex int64
 
-        // Number of total items scanned against item type
-        scannedItemsMap map[madmin.HealItemType]int64
+    // Number of total items scanned against item type
+    scannedItemsMap map[madmin.HealItemType]int64
 
-        // Number of total items healed against item type
-        healedItemsMap map[madmin.HealItemType]int64
+    // Number of total items healed against item type
+    healedItemsMap map[madmin.HealItemType]int64
 
-        // Number of total items where healing failed against item type
-        healFailedItemsMap map[madmin.HealItemType]int64
+    // Number of total items where healing failed against item type
+    healFailedItemsMap map[madmin.HealItemType]int64
 
-        // The time of the last scan/heal activity
-        lastHealActivity time.Time
+    // The time of the last scan/heal activity
+    lastHealActivity time.Time
 
-        // Holds the request-info for logging
-        ctx context.Context
+    // Holds the request-info for logging
+    ctx context.Context
 
-        // used to lock this structure as it is concurrently accessed
-        mutex sync.RWMutex
+    // used to lock this structure as it is concurrently accessed
+    mutex sync.RWMutex
 }
 ```
 
@@ -141,15 +143,15 @@ type healSequence struct {
 
 ```go
 type allHealState struct {
-        sync.RWMutex
+    sync.RWMutex
 
-        // map of heal path to heal sequence
-        healSeqMap map[string]*healSequence // Indexed by endpoint
-        // keep track of the healing status of disks in the memory
-        //   false: the disk needs to be healed but no healing routine is started
-        //    true: the disk is currently healing
-        healLocalDisks map[Endpoint]bool 
-        healStatus     map[string]healingTracker // Indexed by disk ID
+    // map of heal path to heal sequence
+    healSeqMap map[string]*healSequence // Indexed by endpoint
+    // keep track of the healing status of disks in the memory
+    //   false: the disk needs to be healed but no healing routine is started
+    //    true: the disk is currently healing
+    healLocalDisks map[Endpoint]bool 
+    healStatus     map[string]healingTracker // Indexed by disk ID
 }
 ```
 
@@ -159,58 +161,58 @@ type allHealState struct {
 
 ```go
 type healingTracker struct {
-        disk StorageAPI    `msg:"-"`
-        mu   *sync.RWMutex `msg:"-"`
+    disk StorageAPI    `msg:"-"`
+    mu   *sync.RWMutex `msg:"-"`
 
-        ID         string    // Disk ID
-        PoolIndex  int       // Pool index
-        SetIndex   int       // Set index
-        DiskIndex  int       // Disk index
-        Path       string    // Path to drive
-        Endpoint   string    // Endpoint of drive
-        Started    time.Time
-        LastUpdate time.Time
+    ID         string    // Disk ID
+    PoolIndex  int       // Pool index
+    SetIndex   int       // Set index
+    DiskIndex  int       // Disk index
+    Path       string    // Path to drive
+    Endpoint   string    // Endpoint of drive
+    Started    time.Time
+    LastUpdate time.Time
 
-        ObjectsTotalCount uint64
-        ObjectsTotalSize  uint64
+    ObjectsTotalCount uint64
+    ObjectsTotalSize  uint64
 
-        ItemsHealed uint64
-        ItemsFailed uint64
+    ItemsHealed uint64
+    ItemsFailed uint64
 
-        BytesDone   uint64
-        BytesFailed uint64
+    BytesDone   uint64
+    BytesFailed uint64
 
-        // Last object scanned.
-        Bucket string `json:"-"`
-        Object string `json:"-"`
+    // Last object scanned.
+    Bucket string `json:"-"`
+    Object string `json:"-"`
 
-        // Numbers when current bucket started healing,
-        // for resuming with correct numbers.
-        ResumeItemsHealed  uint64 `json:"-"`
-        ResumeItemsFailed  uint64 `json:"-"`
-        ResumeItemsSkipped uint64 `json:"-"`
-        ResumeBytesDone    uint64 `json:"-"`
-        ResumeBytesFailed  uint64 `json:"-"`
-        ResumeBytesSkipped uint64 `json:"-"`
+    // Numbers when current bucket started healing,
+    // for resuming with correct numbers.
+    ResumeItemsHealed  uint64 `json:"-"`
+    ResumeItemsFailed  uint64 `json:"-"`
+    ResumeItemsSkipped uint64 `json:"-"`
+    ResumeBytesDone    uint64 `json:"-"`
+    ResumeBytesFailed  uint64 `json:"-"`
+    ResumeBytesSkipped uint64 `json:"-"`
 
-        // Filled on startup/restarts.
-        QueuedBuckets []string
+    // Filled on startup/restarts.
+    QueuedBuckets []string
 
-        // Filled during heal.
-        HealedBuckets []string
+    // Filled during heal.
+    HealedBuckets []string
 
-        // ID of the current healing operation
-        HealID string
+    // ID of the current healing operation
+    HealID string
 
-        ItemsSkipped uint64
-        BytesSkipped uint64
+    ItemsSkipped uint64
+    BytesSkipped uint64
 
-        RetryAttempts uint64
+    RetryAttempts uint64
 
-        Finished bool // finished healing, whether with errors or not
+    Finished bool // finished healing, whether with errors or not
 
-        // Add future tracking capabilities
-        // Be sure that they are included in toHealingDisk
+    // Add future tracking capabilities
+    // Be sure that they are included in toHealingDisk
 }
 ```
 
@@ -219,8 +221,8 @@ type healingTracker struct {
 
 ```go
 type healRoutine struct {
-        tasks   chan healTask
-        workers int
+    tasks   chan healTask
+    workers int
 }
 ```
 
@@ -235,12 +237,12 @@ type healRoutine struct {
 //        path: 'bucket/' or '/bucket/' => Heal bucket
 //        path: 'bucket/object' => Heal object
 type healTask struct {
-        bucket    string
-        object    string
-        versionID string
-        opts      madmin.HealOpts
-        // Healing response will be sent here
-        respCh chan healResult
+    bucket    string
+    object    string
+    versionID string
+    opts      madmin.HealOpts
+    // Healing response will be sent here
+    respCh chan healResult
 }
 ```
 
@@ -251,13 +253,13 @@ type healTask struct {
 ```go
 // 用于表示对象成功上传或删除，但未完全写入所有磁盘的情况，只要满足法定人数即可。
 type PartialOperation struct {
-        Bucket              string
-        Object              string
-        VersionID           string
-        Versions            []byte
-        SetIndex, PoolIndex int
-        Queued              time.Time
-        BitrotScan          bool
+    Bucket              string
+    Object              string
+    VersionID           string
+    Versions            []byte
+    SetIndex, PoolIndex int
+    Queued              time.Time
+    BitrotScan          bool
 }
 ```
 
@@ -274,15 +276,15 @@ MINIO默认会启动一个定时任务（默认频率为10s一次），该定时
 
 ```go
 type allHealState struct {
-        sync.RWMutex
+    sync.RWMutex
 
-        // map of heal path to heal sequence
-        healSeqMap map[string]*healSequence // Indexed by endpoint
-        // keep track of the healing status of disks in the memory
-        //   false: the disk needs to be healed but no healing routine is started
-        //    true: the disk is currently healing
-        healLocalDisks map[Endpoint]bool 
-        healStatus     map[string]healingTracker // Indexed by disk ID
+    // map of heal path to heal sequence
+    healSeqMap map[string]*healSequence // Indexed by endpoint
+    // keep track of the healing status of disks in the memory
+    //   false: the disk needs to be healed but no healing routine is started
+    //    true: the disk is currently healing
+    healLocalDisks map[Endpoint]bool 
+    healStatus     map[string]healingTracker // Indexed by disk ID
 }
 ```
 
@@ -346,8 +348,8 @@ MINIO中每个Object的分片分布在object下的xl.meta文件中记录：
 func (p *parallelReader) Read(dst [][]byte) ([][]byte, error){
 // ...
     for i := 0; i < p.dataBlocks; i++ {
-            // Setup read triggers for p.dataBlocks number of reads so that it reads in parallel.
-            readTriggerCh <- true
+        // Setup read triggers for p.dataBlocks number of reads so that it reads in parallel.
+        readTriggerCh <- true
     }
 // ...
 }
@@ -359,28 +361,28 @@ func (p *parallelReader) Read(dst [][]byte) ([][]byte, error){
 // cmd/erasure-decode.go
 func (p *parallelReader) Read(dst [][]byte) ([][]byte, error){
 // ...
-        n, err := rr.ReadAt(p.buf[bufIdx], p.offset)
-        if err != nil {
-                switch {
-                case errors.Is(err, errFileNotFound):
-                        atomic.StoreInt32(&missingPartsHeal, 1)
-                case errors.Is(err, errFileCorrupt):
-                        atomic.StoreInt32(&bitrotHeal, 1)
-                case errors.Is(err, errDiskNotFound):
-                        atomic.AddInt32(&disksNotFound, 1)
-                }
-
-                // This will be communicated upstream.
-                p.orgReaders[bufIdx] = nil
-                if br, ok := p.readers[i].(io.Closer); ok {
-                        br.Close()
-                }
-                p.readers[i] = nil
-
-                // Since ReadAt returned error, trigger another read.
-                readTriggerCh <- true
-                return
+    n, err := rr.ReadAt(p.buf[bufIdx], p.offset)
+    if err != nil {
+        switch {
+        case errors.Is(err, errFileNotFound):
+                atomic.StoreInt32(&missingPartsHeal, 1)
+        case errors.Is(err, errFileCorrupt):
+                atomic.StoreInt32(&bitrotHeal, 1)
+        case errors.Is(err, errDiskNotFound):
+                atomic.AddInt32(&disksNotFound, 1)
         }
+
+        // This will be communicated upstream.
+        p.orgReaders[bufIdx] = nil
+        if br, ok := p.readers[i].(io.Closer); ok {
+                br.Close()
+        }
+        p.readers[i] = nil
+
+        // Since ReadAt returned error, trigger another read.
+        readTriggerCh <- true
+        return
+    }
 // ...
 }
 ```
@@ -397,33 +399,33 @@ func (er erasureObjects) getObjectWithFileInfo(ctx context.Context, bucket, obje
     // we return from this function.
     closeBitrotReaders(readers)
     if err != nil {
-            // If we have successfully written all the content that was asked
-            // by the client, but we still see an error - this would mean
-            // that we have some parts or data blocks missing or corrupted
-            // - attempt a heal to successfully heal them for future calls.
-            if written == partLength {
-                    if errors.Is(err, errFileNotFound) || errors.Is(err, errFileCorrupt) {
-                            healOnce.Do(func() {
-                                    globalMRFState.addPartialOp(PartialOperation{
-                                            Bucket:     bucket,
-                                            Object:     object,
-                                            VersionID:  fi.VersionID,
-                                            Queued:     time.Now(),
-                                            SetIndex:   er.setIndex,
-                                            PoolIndex:  er.poolIndex,
-                                            BitrotScan: errors.Is(err, errFileCorrupt),
-                                    })
-                            })
-                            // Healing is triggered and we have written
-                            // successfully the content to client for
-                            // the specific part, we should `nil` this error
-                            // and proceed forward, instead of throwing errors.
-                            err = nil
-                    }
+        // If we have successfully written all the content that was asked
+        // by the client, but we still see an error - this would mean
+        // that we have some parts or data blocks missing or corrupted
+        // - attempt a heal to successfully heal them for future calls.
+        if written == partLength {
+            if errors.Is(err, errFileNotFound) || errors.Is(err, errFileCorrupt) {
+                healOnce.Do(func() {
+                    globalMRFState.addPartialOp(PartialOperation{
+                        Bucket:     bucket,
+                        Object:     object,
+                        VersionID:  fi.VersionID,
+                        Queued:     time.Now(),
+                        SetIndex:   er.setIndex,
+                        PoolIndex:  er.poolIndex,
+                        BitrotScan: errors.Is(err, errFileCorrupt),
+                    })
+                })
+                // Healing is triggered and we have written
+                // successfully the content to client for
+                // the specific part, we should `nil` this error
+                // and proceed forward, instead of throwing errors.
+                err = nil
             }
-            if err != nil {
-                    return toObjectErr(err, bucket, object)
-            }
+        }
+        if err != nil {
+            return toObjectErr(err, bucket, object)
+        }
     }
 // ...
 }
@@ -436,12 +438,12 @@ MRF的功能较为明确，即调用Heal核心API，处理分片数据不完整�
 ```go
 // healObject sends the given object/version to the background healing workers
 func healObject(bucket, object, versionID string, scan madmin.HealScanMode) error {
-        // Get background heal sequence to send elements to heal
-        bgSeq, ok := globalBackgroundHealState.getHealSequenceByToken(bgHealingUUID)
-        if ok {
-                return bgSeq.healObject(bucket, object, versionID, scan)
-        }
-        return nil
+    // Get background heal sequence to send elements to heal
+    bgSeq, ok := globalBackgroundHealState.getHealSequenceByToken(bgHealingUUID)
+    if ok {
+        return bgSeq.healObject(bucket, object, versionID, scan)
+    }
+    return nil
 }
 ```
 
