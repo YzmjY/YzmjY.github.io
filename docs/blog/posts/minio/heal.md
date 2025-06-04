@@ -6,7 +6,7 @@ draft: false
 ---
 
 
-# 【MINIO】数据修复
+# 【MinIO】数据修复
 ---
 
 ## 概念
