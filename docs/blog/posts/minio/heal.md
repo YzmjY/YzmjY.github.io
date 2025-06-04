@@ -309,7 +309,9 @@ type allHealState struct {
 
 ##### 请求触发修复
 
-对Object进行GET、HEAD请求时，如果Object的数据分片出现损坏、缺失，则会触发MINIO的修复机制；如果数据分片未损坏，校验分片损坏，则不会触发。
+MINIO处理对Object的GET、HEAD请求时，会首先并发获取Object的元数据，即读取每个server上对应Object目录下的xl.meta文件，如果发现元数据有损坏，则会尝试修复该Object，即将该Object加入mrf修复队列中。
+
+元数据获取完成之后，开始获取Object数据，读取顺序为优先数据分片，数据分片不足，读取校验分片。如果Object的数据分片出现损坏、缺失，则会触发MINIO的修复机制；如果数据分片未损坏，校验分片损坏，则不会触发。
 
 MINIO中每个Object的分片分布在object下的xl.meta文件中记录：
 
