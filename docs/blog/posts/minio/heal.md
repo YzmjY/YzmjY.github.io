@@ -28,14 +28,17 @@ MINIO会在以下情况下，触发数据修复流程：
   如果对象的数据分片缺失或损坏，则 MinIO 会使用可用的奇偶校验分片计算对象数据进行返回（同时将数据修复任务加入mrf修复序列中，异步执行Object修复）。每个丢失或损坏的数据分片都必须有一个完整的奇偶校验分片可用，否则无法恢复对象。如果任何奇偶校验分片丢失或损坏，MinIO 将恢复奇偶校验分片，前提是有足够的其他奇偶校验分片来为对象提供服务。
 
 - Scanner扫描期间
-  代码存在BUG，导致Scanner子系统永远不会触发数据修复。（data-scan seems always skip heal? · minio/minio · Discussion #21300）
+
+  !!! note
+
+      代码存在BUG，导致Scanner子系统永远不会触发数据修复。
 
   MinIO 使用对象扫描程序来执行许多与对象相关的任务。其中一项任务会检查对象的完整性，如果发现对象已损坏或损坏，则会修复它们。
   在每次扫描过程中，MinIO 使用对象名称的哈希值与scanner周期数做取模计算，默认每个Object会在每1024轮被选中，执行Heal操作。
   如果发现任何对象丢失了分片，MinIO 会从可用分片中修复该对象。默认情况下，MinIO 不使用扫描程序检查bitrot损坏。这可能是一个比较重的操作，并且跨多个磁盘的bitrot的风险很低。
 
 - 手动触发
-  管理员可以使用 mc admin heal 启动完整的系统修复。该程序非常耗费资源，通常不需要。
+  管理员可以使用 `mc admin heal` 启动完整的系统修复。该程序非常耗费资源，通常不需要。
 
 ## 实现
 ### 核心API及其实现
@@ -65,7 +68,7 @@ HealObject从Pool层开始调用，并发请求每个Pool，每个Pool内按照h
 
 #### healSequence
 
-一个数据恢复序列，保存数据修复过程中的各种状态及统计指标。本身不处理恢复任务，将恢复任务转发给healRoutine处理。
+一个数据恢复序列，保存数据修复过程中的各种状态及统计指标。本身不处理恢复任务，将恢复任务转发给`healRoutine`处理。
 
 ```go
 type healSequence struct {
@@ -132,7 +135,7 @@ type healSequence struct {
 
 每个server在内存中保存两个全局的`allHealState`变量：
 
-- `globalBackgroundHealState`:  只有一个bgSeq序列，id:"0000-0000-0000-0000"，用来处理新磁盘格式化等后台自动进行的数据修复任务。
+- `globalBackgroundHealState`:  只有一个修复序列(`bgSeq`,id:"0000-0000-0000-0000")，用来处理新磁盘格式化等后台自动进行的数据修复任务。
 
 - `globalAllHealState`:  对应Admin API手动触发的修复任务，每次新的Heal请求会在该state中新增seq（不同的Path）。
 
@@ -152,7 +155,7 @@ type allHealState struct {
 
 #### healingTracker
 
-`healingTracker` 用来持久化一次新磁盘格式化和数据恢复过程中的相关信息，对应 .minio.sys/buckets/.healing.bin文件，记录的内容包括：
+`healingTracker` 用来持久化一次新磁盘格式化和数据恢复过程中的相关信息，对应 `.minio.sys/buckets/.healing.bin`文件，记录的内容包括：
 
 ```go
 type healingTracker struct {
@@ -212,7 +215,7 @@ type healingTracker struct {
 ```
 
 #### healRoutine
-接受`healtask`，处理数据修复任务，全局一个实例（`globalBackgroundHealRoutine`）多个worker，worker数量默认为GOMAXPROCS/2，可以通过_MINIO_HEAL_WORKERS环境变量指定。
+接受`healtask`，处理数据修复任务，全局一个实例（`globalBackgroundHealRoutine`）多个worker，worker数量默认为GOMAXPROCS/2，可以通过`_MINIO_HEAL_WORKERS`环境变量指定。
 
 ```go
 type healRoutine struct {
@@ -223,7 +226,7 @@ type healRoutine struct {
 
 #### healTask
 
-一次heal任务，包括heal作用的对象及相关参数，通过channel传递给healRoutine处理。
+一次heal任务，包括heal作用的对象及相关参数，通过channel传递给`healRoutine`处理。
 
 ```go
 // healTask represents what to heal along with options
@@ -297,8 +300,8 @@ type allHealState struct {
 
 修复流程为：
 - 获取锁，确保一个erasureSet中的磁盘不会并行修复。
-- 获取所有bucket，将bucket修复任务传入globalBackgroundHealState 的seq（"0000-0000-0000-0000"）中，先将所有bucket恢复，此时bucket中的object尚未恢复。
-- 并发调用HealObject 恢复各bucket中的object数据。
+- 获取所有bucket，将bucket修复任务传入`globalBackgroundHealState` 的seq（"0000-0000-0000-0000"）中，先将所有bucket恢复，此时bucket中的object尚未恢复。
+- 并发调用`HealObject` 恢复各bucket中的object数据。
 
 #### GET/HEAD请求修复 
 
@@ -382,7 +385,7 @@ func (p *parallelReader) Read(dst [][]byte) ([][]byte, error){
 }
 ```
 
-读取成功，但是返回错误，证明数据分片有损坏或丢失，会触发分片修复流程，将该操作加入前面提到的globalMRFState任务队列中。
+读取成功，但是返回错误，证明数据分片有损坏或丢失，会触发分片修复流程，将该操作加入前面提到的`globalMRFState`任务队列中。
 
 ```go
 // cmd/erasure-object.go
@@ -428,7 +431,7 @@ func (er erasureObjects) getObjectWithFileInfo(ctx context.Context, bucket, obje
 
 #### MRF工作流程
 
-MRF的功能较为明确，即调用Heal核心API，处理分片数据不完整的情况。在服务启动时，MRF会创建一个goroutine，来监听Op channel，将Op channel传入的请求转换为healtask放到bgSeq中交由healRoutine处理。
+MRF的功能较为明确，即调用Heal核心API，处理分片数据不完整的情况。在服务启动时，MRF会创建一个goroutine，来监听Op channel，将Op channel传入的请求转换为healtask放到bgSeq中交由`healRoutine`处理。
 
 ```go
 // healObject sends the given object/version to the background healing workers
@@ -468,11 +471,11 @@ MINIO提供Admin API，进行手动触发数据恢复。
 
 ![cmd](../minio/images/mc_admin_heal.png)
 
-实现为将Heal请求组织成一个Seq，放入全局的globalAllHealState的healSeqMap中，由后台worker去执行数据恢复任务。
+实现为将Heal请求组织成一个Seq，放入全局的`globalAllHealState`的healSeqMap中，由后台worker去执行数据恢复任务。
 此外，在API Handler内，会对请求heal的Path进行校验，如果当前队列中已经有同名的Seq，则返回当前Seq的状态，不会重复添加任务。
 恢复任务的执行
 
-在创建一个Seq之后，会将Seq放入globalAllHealState的全局表中，并同时启动一个后台routine，该routine执行遍历操作，对给定的path进行遍历，获取所有的bucket，将bucket恢复任务交由globalBackgroundHealRoutine处理；同时更新Seq中的修复状态。
+在创建一个Seq之后，会将Seq放入`globalAllHealState`的全局表中，并同时启动一个后台routine，该routine执行遍历操作，对给定的path进行遍历，获取所有的bucket，将bucket恢复任务交由`globalBackgroundHealRoutine`处理；同时更新Seq中的修复状态。
 
 ## 验证
 ### 读取分片缺失的Object
@@ -515,28 +518,22 @@ MINIO提供Admin API，进行手动触发数据恢复。
 可见其数据分片在3,1号节点上，校验分片在2号节点上。
 
 - 删除3号节点部分数据，验证数据分片损坏，GET请求会修复数据。
+  删除部分part:
+  ![delete-data-shard](./images/minio_heal_delete_data_part.png)
 
-删除部分part:
+  通过S3API 触发GET请求，读取成功。
 
-![delete-data-shard](./images/minio_heal_delete_data_part.png)
-
-通过S3API 触发GET请求，读取成功。
-
-查看目标节点上分片数据，已恢复：
-
-![recover-data-shard](./images/minio_heal_delete_data_part_recovery.png)
+  查看目标节点上分片数据，已恢复：
+  ![recover-data-shard](./images/minio_heal_delete_data_part_recovery.png)
 
 - 删除2号节点部分数据，验证校验分片损坏，不会进行修复。
+  删除部分part:
+  ![delete-check-shard](./images/minio_heal_delete_parity_part.png)
 
-删除部分part:
+  通过S3API 触发GET请求，读取成功。
 
-![delete-check-shard](./images/minio_heal_delete_parity_part.png)
-
-通过S3API 触发GET请求，读取成功。
-
-查看目标节点上分片数据，未恢复：
-
-![recover-check-shard](./images/minio_heal_delete_parity_part_no_recovery.png)
+  查看目标节点上分片数据，未恢复：
+  ![recover-check-shard](./images/minio_heal_delete_parity_part_no_recovery.png)
 
 ### 验证手动恢复
 
