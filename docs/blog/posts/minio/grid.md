@@ -99,13 +99,44 @@ func (c *Connection) shouldConnect() bool {
 每一对节点之间建立的连接对应一个`Connection`实例，`Connectioin`用来收发连接上的消息，管理连接上的多路复用.
 
 #### 连接建立
-TODO:时序图：
+待建连的两个节点之间首先依据上述的hash算法确定建连的方向，由client端发起建连，server端响应建连。
 
-c 
+##### Client侧
+Client侧会不断地尝试重新建立连接，直至服务关闭即`Connection`实例的状态被设置为Shutdown（正常情况下不会有这个状态）。
 
+Client侧首先会建立WebSocket连接，建连handler如下：
+```go
+// Pass Dialer for websocket grid, make sure we do not
+// provide any DriveOPTimeout() function, as that is not
+// useful over persistent connections.
+Dialer: grid.ConnectWS(
+	grid.ContextDialer(xhttp.DialContextWithLookupHost(lookupHost, xhttp.NewInternodeDialContext(rest.DefaultTimeout, globalTCPOptions.ForWebsocket()))),
+	newCachedAuthToken(),
+	&tls.Config{
+		RootCAs:          globalRootCAs,
+		CipherSuites:     fips.TLSCiphers(),
+		CurvePreferences: fips.TLSCurveIDs(),
+	}),
+```
+WebSocket连接建立的具体过程为：
+- 从`globalDNSCache`模块中获取目标地址的IP地址列表。
+- 遍历IP地址列表，使用net标准库依次尝试建立tcp连接，直至成功连接。
+- TCP连接建连过程之后，按照WebSocket协议进行连接、握手、协议升级等操作，完成WebSocket连接的建立。
+
+上述过程中，`globalDNSCache`模块用于缓存DNS解析结果，避免每次都进行DNS解析。
+
+WebSocket连接建立完成之后，Client侧会通过该连接发送一个`OpConnect`请求，请求中包含了Client的ID、本地地址、远程地址等信息。Server端接收到该请求后，会响应一个`OpConnectResponse`响应，包含了Server的UUID，以及是否接受该连接、拒绝连接的原因等信息。
+
+连接建立后，Client侧会启动两个协程，分别用于接收和发送消息。并一直阻塞直至连接上有错误发生或者连接被关闭。如果连接上有错误发生，Client侧会尝试重新建立连接。
+
+##### Server侧
+Server侧则开放一个HTTP API端点，用于接收Client端的连接请求。 在对应的Handler内处理协议升级等WebSocket建连操作。同样的，WebSocket连接建立之后，Server侧等待Client端发送`OpConnect`请求，接收到该请求后，会响应一个`OpConnectResponse`响应，包含了Server的UUID，以及是否接受该连接、拒绝连接的原因等信息。
+连接建立后，Server侧会启动两个协程，分别用于接收和发送消息。并一直阻塞直至连接上有错误发生或者连接被关闭。Server侧不会尝试重新建立连接，重连的操作由Client端发起。
 
 #### 消息收发
-
+Server端通过接收Client端的连接请求，创建`Connection`实例;Client端主动发起连接请求，创建`Connection`实例。`Connection`建立完成后，会启动两个协程，分别用于接收和发送消息。
+- `readStream`:负责从websocket连接中读取消息，然后将消息解码为`message`私有协议格式，而后根据`OpCode`进行路由，区分出不同的操作类型。
+- `writeStream`: 负责将buf合并写入websocket连接中，并发送探活消息。
 
 ### 多路复用
 一个`Connection`实例上可以同时存在多个`Mux`实例，每个`Mux`实例对应一个连接上的一个多路复用通道，每个`Mux`实例负责接收和发送消息。
@@ -164,10 +195,13 @@ const (
 	OpMerged
 )
 ```
-简单将请求分为控制请求、探活请求和消息处理请求。
+简单将请求分为控制请求、探活请求和RPC请求。j
 
-消息处理请求类似于一次RPC调用，根据msg中的handlerid和subrouter路由到对应的提前注册的handler上进行处理。有单次请求和流式请求两种类型。
+- 控制请求：包含建连、流控、Batch等请求。
+- 探活请求：包含Ping、Pong请求。
+- RPC请求：实现一次远程调用，根据msg中的handlerid和subrouter路由到对应的提前注册的handler上进行处理。有单次请求和流式请求两种类型。
 
+#### Handler
 
 #### Single Request
 
@@ -177,3 +211,16 @@ const (
 
 
 ## MinIO 中的使用
+MinIO中一个Server会有两个全局的`Manager`实例，分别用于处理分布式锁场景和其他交互场景。
+
+### 元数据读写
+
+MinIO中元数据读写由Grid进行处理，数据Part读写由restClient处理。
+
+Grid通信框架适用于对于元数据读写、Bucket、Object删除这类数据量较小的请求，而对于数据Part的读写这类操作，通常数据量较大，不适用于Grid。因此在MinIO中，对于数据Part的读写，使用的是restClient，restClient即为一个简单的HTTP服务，通过REST接口使用HTTP协议进行数据的读写。
+
+### 锁
+
+该场景下使用的是Grid的Stream模式。
+
+
