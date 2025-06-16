@@ -139,13 +139,13 @@ Server端通过接收Client端的连接请求，创建`Connection`实例;Client�
 - `writeStream`: 负责将buf合并写入websocket连接中，并发送探活消息。
 
 ### 多路复用
-一个`Connection`实例上可以同时存在多个`Mux`实例，每个`Mux`实例对应一个连接上的一个多路复用通道，每个`Mux`实例负责接收和发送消息。
+一个`Connection`实例上可以同时存在多个`Mux`实例，每个`Mux`实例对应一个连接上的一个多路复用通道，每个`Mux`实例负责接收和发送消息。同样的，一对`Mux`实例被区分为CS两端，请求发起方会创建一个`muxClient`实例，接受方会创建一个`muxServer`实例。保存在`Connection`实例中的全局Map中，key为对应的mux id。
 
-请求发起方会创建一个`muxClient`实例，接受方会创建一个`muxServer`实例。保存在`Connection`实例中的全局Map中，key为对应的mux id。
+`Mux`的消息收发共用`Connection`的连接，通过`MuxId`进行区分不同的`Mux`实例。
 
-对于单次请求的场景
+对于单次请求的场景，`muxClient`提供`roundtrip`方法，负责组装`Msg`并通过`Connection`进行发送，消息类型为`OpRequest`，而后阻塞等待响应。
 
-对于流式请求的场景，`muxClient`和`muxServer`都会进行消息的收发。
+对于流式请求的场景，`muxClient`提供`RequestStream`方法，Client和Server端进行双向的流式请求。
 
 
 ### 请求处理
@@ -195,20 +195,29 @@ const (
 	OpMerged
 )
 ```
-简单将请求分为控制请求、探活请求和RPC请求。j
+简单将请求分为控制请求、探活请求和RPC请求。
 
 - 控制请求：包含建连、流控、Batch等请求。
 - 探活请求：包含Ping、Pong请求。
 - RPC请求：实现一次远程调用，根据msg中的handlerid和subrouter路由到对应的提前注册的handler上进行处理。有单次请求和流式请求两种类型。
 
 #### Handler
+通过Grid框架，用户可以实现自己的Handler，用于处理RPC请求。
 
-#### Single Request
+对于单次请求的Handler，使用流程如下：
+- 实现一个HandlerFunction：`func(payload []byte) ([]byte, *grid.RemoteErr)`
+- 注册该Handler，关联一个HandlerID。
+- 通过Handler的`Call`方法，实现RPC调用。
 
+流式请求类似，流程如下：
+- 实现Handler：`StreamHandlerFn func(ctx context.Context, payload []byte, in <-chan []byte, out chan<- []byte) *RemoteErr`
+- 注册该Handler，关联一个HandlerID。 
+- 通过Handler的`Call`方法，实现RPC调用，返回一个`Stream`实例。
+  - 通过 `Stream`的`Result`方法，注册一个回调函数，用于处理响应。
+  - 通过 `Stream`的`Send`方法，发送请求。
 
-#### Stream Request
-
-
+### 健康检查
+每个Connection都会定期的进行Ping\Pong的请求来进行探活，对于超时未收到Pong响应的连接，会由Client侧不断地发起`reconnect`请求。
 
 ## MinIO 中的使用
 MinIO中一个Server会有两个全局的`Manager`实例，分别用于处理分布式锁场景和其他交互场景。
