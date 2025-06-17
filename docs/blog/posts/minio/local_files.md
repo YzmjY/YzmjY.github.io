@@ -16,6 +16,8 @@ draft: false
 
 MinIO采用本地文件系统组织数据，并且推荐使用XFS。MinIO要求独占单个驱动或存储卷，其他进程不应该访问该卷，否则会导致数据被损坏。
 
+<!-- more -->
+
 ## Object管理
 MinIO作为一个对象存储系统，使用扁平化的Bucket来组织Object数据。一个Bucket在文件系统中表现为位于顶层目录的一个子目录，Bucket下可以承载任意数量的Object。
 
