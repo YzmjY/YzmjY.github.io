@@ -416,7 +416,7 @@ type PoolDecommissionInfo struct {
 ### `tmp`
 各种临时文件，例如上述分片上传过程，在上传一个part时，也会先写入该目录，完成后再rename到multipart目录下。
 
-系统`.trash`目录，临时删除文件，该目录定时被清理。
+系统`.trash`目录，临时删除文件，该目录定时被清理（周期为最大25ms）。
 
 ## 用户定义桶
 
