@@ -50,6 +50,7 @@ type xlMetaV2VersionHeader struct {
 	EcN, EcM  uint8 // Note that these will be 0/0 for non-v2 objects and older xl.meta
 }
 ``` 
+
 - `VersionID`: 多版本中的版本ID，每个Version不同。
 - `ModTime`: 修改时间。
 - `Signature`: 根据`xlMetaV1Object`计算出的一个签名，一个Object的某一Version的签名在所有磁盘上一致。
@@ -100,6 +101,7 @@ type xlMetaV2Object struct {
 }
 ```
 各字段含义：
+
 - `VersionID`: 版本ID，每个Object的不同版本的VersionID不同。
 - `DataDir`: 数据目录ID，标识该版本数据存储在哪个数据目录。
 - `ErasureAlgorithm`: 纠删码算法，目前只支持`ReedSolomon`。
@@ -151,6 +153,7 @@ type xlMetaV2Object struct {
 func (s *xlStorage) WriteMetadata(ctx context.Context, origvolume, volume, path string, fi FileInfo) (err error)
 ```
 入参：
+
 - `volume`/`path`: 标识磁盘位置。
 - `fi`: 待写入的元数据。
 
