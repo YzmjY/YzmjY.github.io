@@ -6,6 +6,8 @@ draft: false
 ---
 
 # 【MinIO】元数据组织
+---
+
 MinIO的元数据对应xl.meta文件，该文件记录了一个Object的所有元数据条目，包括多版本、删除标记等。
 
 xl.meta文件对应的数据结构如下：

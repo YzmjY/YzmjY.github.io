@@ -70,6 +70,7 @@ plugins:
         - CPP
         - Hot150
         - Minio
+        - K8S
       pagination_per_page: 5
       archive_pagination_per_page: 10
       categories_pagination_per_page: 10
