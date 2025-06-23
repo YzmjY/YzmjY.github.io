@@ -55,7 +55,7 @@ type xlMetaV2VersionHeader struct {
 - `Flags`: 一些标志位的或，包括是否使用了数据目录（非内联或者完成了restore的分层对象）、是否内联数据、是否为FreeVersion（用来处理分层对象，创建一个FreeVersion等待异步删除远端的数据）
 - `EcN`, `EcM`:EC配置 
 
-根据`meta`字段
+根据`meta`字段反序列化得到：
 ```go
 type xlMetaV2Version struct {
 	Type             VersionType           `json:"Type" msg:"Type"`
