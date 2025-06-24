@@ -1,5 +1,5 @@
 ---
-date: 2025-06-24
+date: 2025-06-03
 categories:
   - Minio
 draft: true
