@@ -8,6 +8,7 @@ draft: false
 # 【MinIO】元数据组织
 ---
 
+## Object元数据
 MinIO的元数据对应xl.meta文件，该文件记录了一个Object的所有元数据条目，包括多版本、删除标记等。
 
 xl.meta文件对应的数据结构如下：
@@ -76,7 +77,7 @@ type xlMetaV2Version struct {
 - `DeleteMarker`: 删除标记，当Object被删除时，会设置该字段。
 - `WrittenByVersion`: 写入该元数据的MinIO版本，对应Release时间戳。
 
-## `xlMetaV2Object`字段解析
+### `xlMetaV2Object`字段解析
 完整的`xlMetaV2Object`数据结构定义如下：
 ```go
 type xlMetaV2Object struct {
@@ -145,7 +146,7 @@ type xlMetaV2Object struct {
 - "objectlock-legalhold-timestamp"
 - 
 
-## xl.meta 落盘流程
+### xl.meta 落盘流程
 
 对应`xlStorage`的`WriteMetadata`方法。函数签名为：
 
@@ -159,10 +160,10 @@ func (s *xlStorage) WriteMetadata(ctx context.Context, origvolume, volume, path 
 
 根据上文对于元数据数据结构的分析，可见多个版本对应同一个xl.meta文件，xl.meta内部通过一个数据区分不同的version。xl.meta文件的完整写入流程如下：
 
-### 构造xlMetaV2
+#### 构造xlMetaV2
 完成`FileInfo`到`xlMetaV2Version`的数据转换，判断是对已有version的修改还是新增version，新增version插入`xlMetaV2.versions`的前端。
 
-### 编码
+#### 编码
 编码xlMetaV2，具体编码格式如下：
 
 ```
@@ -200,8 +201,50 @@ func (s *xlStorage) WriteMetadata(ctx context.Context, origvolume, volume, path 
 |                             Inline Data                            |
 +--------------------------------------------------------------------+
 ```
-### 落盘
+#### 落盘
 写磁盘，对于临时创建的对象（例如在 `listObjects()` 调用期间创建的对象），可以不用使用sync落盘，其余的写入都是sync的。
+
+## Bucket元数据
+每个Bucket的元数据对应一个在系统保留Bucket(`.minio.sys`)下的一个Object，具体名称为：`buckets/<bucketname>/.metadata.bin`。该文件记录了一个Bucket所有的元数据信息（不包括使用量等统计信息），对应的数据结构为：
+
+```go
+type BucketMetadata struct {
+	Name                        string
+	Created                     time.Time
+	LockEnabled                 bool // legacy not used anymore.
+	PolicyConfigJSON            []byte
+	NotificationConfigXML       []byte
+	LifecycleConfigXML          []byte
+	ObjectLockConfigXML         []byte
+	VersioningConfigXML         []byte
+	EncryptionConfigXML         []byte
+	TaggingConfigXML            []byte
+	QuotaConfigJSON             []byte
+	ReplicationConfigXML        []byte
+	BucketTargetsConfigJSON     []byte
+	BucketTargetsConfigMetaJSON []byte
+
+	PolicyConfigUpdatedAt            time.Time
+	ObjectLockConfigUpdatedAt        time.Time
+	EncryptionConfigUpdatedAt        time.Time
+	TaggingConfigUpdatedAt           time.Time
+	QuotaConfigUpdatedAt             time.Time
+	ReplicationConfigUpdatedAt       time.Time
+	VersioningConfigUpdatedAt        time.Time
+	LifecycleConfigUpdatedAt         time.Time
+	NotificationConfigUpdatedAt      time.Time
+	BucketTargetsConfigUpdatedAt     time.Time
+	BucketTargetsConfigMetaUpdatedAt time.Time
+	// Add a new UpdatedAt field and update lastUpdate function
+
+	// Unexported fields. Must be updated atomically.
+  ...
+}
+```
+由上述字段描述，Bucket元数据包含一个Bucket的访问策略、生命周期配置、多版本配置、多副本配置等等。
+
+### Bucket元数据管理
+Bucket元数据的管理对应`BucketMetadataSys`子模块，该模块在内存中缓存了一个MinIO集群所有Bucket的元数据，提供了BucketMeta的读写接口。
 
 
 
