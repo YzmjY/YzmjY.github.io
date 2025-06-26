@@ -5,7 +5,7 @@ categories:
 draft: true
 ---
 
-#【MinIO】Scanner
+# 【MinIO】Scanner
 ---
 
 Scanner是MinIO中一个重要的子系统，MinIO使用Scanner程序来实现诸多功能，包括：
