@@ -12,7 +12,7 @@ draft: false
 - 数组的访问时间复杂度为 O(1)。
 - 数组的插入和删除操作的时间复杂度为 O(n)。
 
-
+数组的根本特性是一段连续的内存空间，由此决定它可以寻秩访问，即可以通过下标直接访问到数组中的元素。
 
 <!-- more -->
 
@@ -294,3 +294,18 @@ int binary_search(const vector<int>& v,int target) {
 ### 双指针
 
 ### 滑动窗口
+滑动窗口一般框架，以求和大于等于 target 的最短子数组长度为例：
+```cpp
+int left = 0;
+int right = 0;
+int sum = 0;    // 一个目标
+while(right<s.size()) {
+    sum += s[right];
+    while(sum>=target) {
+        ans = min(ans,right-left+1);
+        sum -= s[left];
+        left++; // 移动左边界
+    }
+    right++; // 右边界
+}
+```
