@@ -305,6 +305,10 @@ type allHealState struct {
 - 获取所有bucket，将bucket修复任务传入`globalBackgroundHealState` 的seq（"0000-0000-0000-0000"）中，先将所有bucket恢复，此时bucket中的object尚未恢复。
 - 并发调用`HealObject` 恢复各bucket中的object数据。
 
+新磁盘修复过程中，如果发生错误，则不会将磁盘状态更新为已修复，需要等待下一次定时任务触发修复。
+
+若有Object修复失败，会返回重试错误，最多四次。
+
 #### GET/HEAD请求修复 
 
 ##### 请求触发修复
