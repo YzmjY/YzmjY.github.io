@@ -5,11 +5,12 @@ categories:
 draft: false
 ---
 
-#【K8S】Kubernetes存储
+# 【K8S】Kubernetes存储
 ---
 
 > [K8S官方文档：存储概念](https://kubernetes.io/docs/concepts/storage/)
 
+<!--more-->
 
 ## Kubernetes卷
 
