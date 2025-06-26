@@ -2,7 +2,7 @@
 date: 2025-06-26
 categories:
   - Minio
-draft: true
+draft: false
 ---
 
 # 【MinIO】Scanner
@@ -15,4 +15,4 @@ Scanner是MinIO中一个重要的子系统，MinIO使用Scanner程序来实现�
 - 应用Bucket或Site级别的负责策略。
 - 检查对象是否损坏并修复。
 
-<!--more-->
+<!-- more -->
