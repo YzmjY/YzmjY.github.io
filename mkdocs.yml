@@ -135,7 +135,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Coding:
+  - Blog:
       - blog/index.md
       - Tags: blog/tags.md
   - CEPH文档翻译:

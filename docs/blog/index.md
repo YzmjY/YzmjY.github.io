@@ -1,2 +1,2 @@
-# All About Coding
+# Blog
 
