@@ -160,31 +160,42 @@ nav:
         - ceph_doc/ceph_file_system/developer-guides/journaler.md
 
     - CEPH架构: ceph_doc/architecture/architecture.md 
-  - 刷题记录: 
+  - 数据结构与算法: 
     - lc/index.md
-    - 面试top150:
+    - 数据结构与算法:
+      - lc/algo/index.md
+      - "基础知识":
+        - lc/algo/array.md
+        - lc/algo/string.md
+    - 刷题:
       - lc/top-interview-150/index.md
       - "top150":
-        - lc/top-interview-150/1_88_合并两个有序数组.md
-        - lc/top-interview-150/2_27_移除元素.md
-        - lc/top-interview-150/3_26_删除有序数组中的重复项.md
-        - lc/top-interview-150/4_80_删除有序数组中的重复项 II.md
-        - lc/top-interview-150/5_169_多数元素.md
-        - lc/top-interview-150/6_189_轮转数组.md
-        - lc/top-interview-150/7_121_买卖股票的最佳时机.md
-        - lc/top-interview-150/8_122_买卖股票的最佳时机 II.md
-        - lc/top-interview-150/9_55_跳跃游戏.md
-        - lc/top-interview-150/10_45_跳跃游戏 II.md
-        - lc/top-interview-150/11_274_H 指数.md
-        - lc/top-interview-150/12_380_O(1)时间插入、删除和获取随机元素.md
-        - lc/top-interview-150/13_238_除自身以外数组的乘积.md
-        - lc/top-interview-150/14_134_加油站.md
-        - lc/top-interview-150/15_135_分发糖果.md
-        - lc/top-interview-150/16_42_接雨水.md
-        - lc/top-interview-150/17_13_罗马数字转整数.md
-        - lc/top-interview-150/18_12_整数转罗马数字.md
-        - lc/top-interview-150/19_58_最后一个单词的长度.md
-        - lc/top-interview-150/20_14_最长公共前缀.md
-        - lc/top-interview-150/21_ 151_反转字符串中的单词.md
-        - lc/top-interview-150/22_6_Z字形变换.md
-        - lc/top-interview-150/23_28_找出字符串中第一个匹配项的下标.md
+        - "数组/字符串":
+          - lc/top-interview-150/1_88_合并两个有序数组.md
+          - lc/top-interview-150/2_27_移除元素.md
+          - lc/top-interview-150/3_26_删除有序数组中的重复项.md
+          - lc/top-interview-150/4_80_删除有序数组中的重复项 II.md
+          - lc/top-interview-150/5_169_多数元素.md
+          - lc/top-interview-150/6_189_轮转数组.md
+          - lc/top-interview-150/7_121_买卖股票的最佳时机.md
+          - lc/top-interview-150/8_122_买卖股票的最佳时机 II.md
+          - lc/top-interview-150/9_55_跳跃游戏.md
+          - lc/top-interview-150/10_45_跳跃游戏 II.md
+          - lc/top-interview-150/11_274_H 指数.md
+          - lc/top-interview-150/12_380_O(1)时间插入、删除和获取随机元素.md
+          - lc/top-interview-150/13_238_除自身以外数组的乘积.md
+          - lc/top-interview-150/14_134_加油站.md
+          - lc/top-interview-150/15_135_分发糖果.md
+          - lc/top-interview-150/16_42_接雨水.md
+          - lc/top-interview-150/17_13_罗马数字转整数.md
+          - lc/top-interview-150/18_12_整数转罗马数字.md
+          - lc/top-interview-150/19_58_最后一个单词的长度.md
+          - lc/top-interview-150/20_14_最长公共前缀.md
+          - lc/top-interview-150/21_ 151_反转字符串中的单词.md
+          - lc/top-interview-150/22_6_Z字形变换.md
+          - lc/top-interview-150/23_28_找出字符串中第一个匹配项的下标.md
+          - lc/top-interview-150/24_68_文本左右对齐.md
+        - "双指针":
+          - lc/top-interview-150/25_125_验证回文串.md
+          - lc/top-interview-150/26_392_判断子序列.md
+          - lc/top-interview-150/27_167_两数之和II-输入有序数组.md
