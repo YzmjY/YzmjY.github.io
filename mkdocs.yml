@@ -64,7 +64,7 @@ plugins:
         - en
         - zh
   - blog:
-      archive_date_format: MMMM yyyy
+      archive_date_format: yyyy
       categories_allowed:
         - CEPH
         - CPP
@@ -187,3 +187,4 @@ nav:
         - lc/top-interview-150/20_14_最长公共前缀.md
         - lc/top-interview-150/21_ 151_反转字符串中的单词.md
         - lc/top-interview-150/22_6_Z字形变换.md
+        - lc/top-interview-150/23_28_找出字符串中第一个匹配项的下标.md
