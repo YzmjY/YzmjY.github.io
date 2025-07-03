@@ -199,3 +199,11 @@ nav:
           - lc/top-interview-150/25_125_验证回文串.md
           - lc/top-interview-150/26_392_判断子序列.md
           - lc/top-interview-150/27_167_两数之和II-输入有序数组.md
+          - lc/top-interview-150/28_11_盛最多水的容器.md
+          - lc/top-interview-150/29_15_三数之和.md
+        - "滑动窗口":
+          - lc/top-interview-150/30_209_长度最小的子数组.md
+          - lc/top-interview-150/31_3_无重复字符的最长子串.md
+          - lc/top-interview-150/32_30_串联所有单词的子串.md
+          - lc/top-interview-150/33_76_最小覆盖子串.md
+          
