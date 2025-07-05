@@ -208,4 +208,7 @@ nav:
           - lc/top-interview-150/33_76_最小覆盖子串.md
         - "矩阵":
           - lc/top-interview-150/34_36_有效的数独.md
+          - lc/top-interview-150/35_54_螺旋矩阵.md
+          - lc/top-interview-150/36_48_旋转图像.md
+          - lc/top-interview-150/37_73_矩阵置零.md
           
