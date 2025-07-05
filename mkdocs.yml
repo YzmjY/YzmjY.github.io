@@ -206,4 +206,6 @@ nav:
           - lc/top-interview-150/31_3_无重复字符的最长子串.md
           - lc/top-interview-150/32_30_串联所有单词的子串.md
           - lc/top-interview-150/33_76_最小覆盖子串.md
+        - "矩阵":
+          - lc/top-interview-150/34_36_有效的数独.md
           
