@@ -211,4 +211,7 @@ nav:
           - lc/top-interview-150/35_54_螺旋矩阵.md
           - lc/top-interview-150/36_48_旋转图像.md
           - lc/top-interview-150/37_73_矩阵置零.md
+        - "哈希表":
+          - lc/top-interview-150/39_383_赎金信.md
+          - lc/top-interview-150/40_205_同构字符串.md
           
