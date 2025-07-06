@@ -214,4 +214,7 @@ nav:
         - "哈希表":
           - lc/top-interview-150/39_383_赎金信.md
           - lc/top-interview-150/40_205_同构字符串.md
+          - lc/top-interview-150/41_290_单词规律.md
+          - lc/top-interview-150/42_242_有效的字母异位词.md
+          - lc/top-interview-150/43_49_字母异位词分组.md
           
