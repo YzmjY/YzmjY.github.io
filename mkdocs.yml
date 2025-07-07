@@ -167,6 +167,7 @@ nav:
       - "基础知识":
         - lc/algo/array.md
         - lc/algo/string.md
+        - lc/algo/heap.md
     - 刷题:
       - lc/top-interview-150/index.md
       - "top150":
