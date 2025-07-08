@@ -1,11 +1,11 @@
 ---
 date: 2025-07-01
 categories:
-  - Minio
+  - MinIO
 draft: false
 ---
 
-# (MinIO) mc 工具常用命令
+# MinIO: mc 工具常用命令
 
 ![](./images/minio.png)
 `mc` 命令行工具为 `ls`、`cat`、`cp`、`mirror` 和 `diff` 等 `UNIX` 命令提供了一种现代替代方案，同时支持本地文件系统和与 Amazon S3 兼容的云存储服务。
@@ -14,12 +14,12 @@ draft: false
 
 ## 安装
 
-### 创建S3服务别名
+### 创建 S3 服务别名
 ```bash
 mc alias set ALIAS HOSTNAME ACCESS_KEY SECRET_KEY
 ```
 
-- `ALIAS`: S3服务别名，通过该名称标识针对哪个S3服务执行命令。
+- `ALIAS`: S3 服务别名，通过该名称标识针对哪个 S3 服务执行命令。
 - `HOSTNAME`: MinIO 服务器主机名
 - `ACCESS_KEY`: 访问密钥
 - `SECRET_KEY`: 秘密密钥
@@ -60,7 +60,7 @@ mc admin info ALIAS
 
 ## 常用命令
 
-`mc`的命令分为仅适用于MinIO和适用于S3服务的命令，其中`mc admin`簇的命令仅适用于MinIO，一些`mc`命令允许模式匹配，支持`*`/`?`通配符。
+`mc`的命令分为仅适用于 MinIO 和适用于 S3 服务的命令，其中 `mc admin` 簇的命令仅适用于 MinIO，一些 `mc` 命令允许模式匹配，支持 `*`/`?` 通配符。
 
 - `*`: 通配符，匹配任意字符串
 - `?`: 通配符，匹配任意一个字符
@@ -73,21 +73,23 @@ mc admin info ALIAS
 - `--json`: 以JSON格式输出
 
 ### 普通命令
+
 > 详情：[mc 命令](https://min.io/docs/minio/linux/reference/minio-mc.html)
 
 `mc`提供诸如`cat`, `cp`,`diff`,`du`,`find`,`head`, `ls`, `mv`, `rm`, `stat`,`tree`等类似UNIX的命令，命令语义也类似。
 
-此外，针对S3特有的Bucket，Object有如下命令：
+此外，针对 S3 特有的 Bucket，Object 有如下命令：
 
-- `mb`: 创建Bucket
-- `rb`: 删除Bucket
-- `get`: 下载Object
-- `put`: 上传Object
+- `mb`: 创建 Bucket
+- `rb`: 删除 Bucket
+- `get`: 下载 Object
+- `put`: 上传 Object
 - `quota`: Bucket 配额相关
 - `ready`: 检查集群是否可用
 - `ping`: 检查集群是否联通
 
 #### 常用示例
+
 1. 检查集群是否可读写：
     ```bash
     > mc ready minio --json
@@ -103,7 +105,7 @@ mc admin info ALIAS
     }
     ```
 
-2. 查看一个Bucket的用量，Object分布等情况：
+2. 查看一个 Bucket 的用量，Object 分布等情况：
     ```bash
     > mc stat minio/data
     ---
@@ -137,7 +139,7 @@ mc admin info ALIAS
     0 object(s) LESS_THAN_1024_B
     ```
 
-1. 查看一个Bucket的quota设置：
+1. 查看一个 Bucket 的 quota 设置：
     ```bash
     > mc quota info minio/data --json
     ---
@@ -159,7 +161,7 @@ mc admin info ALIAS
 ```
 
 #### 配置管理
-`mc admin config`相关命令提供管理员对集群配置的管理。
+`mc admin config` 相关命令提供管理员对集群配置的管理。
 
 1. 获取配置
     ```bash
@@ -180,7 +182,7 @@ mc admin info ALIAS
 
 #### 数据修复
 
-`mc admin heal`相关命令用于修复数据的相关能力。
+`mc admin heal` 相关命令用于修复数据的相关能力。
 
 ```bash
 mc admin heal [FLAGS] TARGET
@@ -203,9 +205,10 @@ mc admin heal <alias/bucket>
 ```
 该命令有一些Flag是隐藏的，例如：
 
-- `-r`: 递归的修复Target下所有Object。
+- `-r`: 递归的修复 Target 下所有 Object。
 
-如果没有指定bucket且没有-r选项，该命令只会返回后台修复进程（新磁盘修复）的状态，对于没有换盘坏盘等情况，正常输出为：
+如果没有指定 bucket 且没有 -r 选项，该命令只会返回后台修复进程（新磁盘修复）的状态，对于没有换盘坏盘等情况，正常输出为：
+
 ```bash
 >mc admin heal minio
 ---

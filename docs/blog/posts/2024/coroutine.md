@@ -1,10 +1,14 @@
 ---
 date: 2024-11-24
 categories:
-  - CPP
+  - C++
 ---
 
-# Coroutines
+# C++: Coroutines
+
+![](../assert/cpp-logo.png){ width="200" }
+/// caption
+///
 
 > [Daily Bite of C++ Coroutines: Step by Step](https://simontoth.substack.com/p/daily-bite-of-c-coroutines-step-by)
 

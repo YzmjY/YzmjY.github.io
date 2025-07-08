@@ -1,7 +1,7 @@
 ---
 date: 2025-06-23
 categories:
-  - K8S
+  - Kubernetes
 draft: false
 ---
 
