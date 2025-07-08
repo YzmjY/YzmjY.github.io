@@ -64,20 +64,18 @@ plugins:
         - en
         - zh
   - blog:
+      archive: true
+      archive_name: 归档
+      archive_toc: true
       archive_date_format: yyyy
-      categories_allowed:
-        - CEPH
-        - CPP
-        - Hot150
-        - Minio
-        - K8S
+      categories: true
+      categories_name: 分类
       pagination_per_page: 5
       archive_pagination_per_page: 10
       categories_pagination_per_page: 10
       blog_toc: true
   - minify:
       minify_html: true
-  - tags
 
 hooks:
   - overrides/hooks/shortcodes.py
@@ -134,32 +132,30 @@ markdown_extensions:
   - pymdownx.tilde
 
 nav:
-  - Home: index.md
-  - Blog:
+  - 笔记:
       - blog/index.md
-      - Tags: blog/tags.md
-  - CEPH文档翻译:
-    - ceph_doc/index.md
-    - CEPH文件系统:
-      - ceph_doc/ceph_file_system/index.md
-      - "CephFS 概念":
-        - ceph_doc/ceph_file_system/cephfs_concepts/mds-states.md 
-        - ceph_doc/ceph_file_system/cephfs_concepts/posix.md 
-        - ceph_doc/ceph_file_system/cephfs_concepts/mds-journaling.md 
-        - ceph_doc/ceph_file_system/cephfs_concepts/file-layouts.md 
-        - ceph_doc/ceph_file_system/cephfs_concepts/mdcache.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/dynamic-metadata-mangement.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/cephfs-io-path.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/charmap.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/lazyio.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/dirfrags.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/multimds.md
-        - ceph_doc/ceph_file_system/cephfs_concepts/snapshots.md
-      - "开发者指南":
-        - ceph_doc/ceph_file_system/developer-guides/capabilities.md
-        - ceph_doc/ceph_file_system/developer-guides/journaler.md
+  # - CEPH文档翻译:
+  #   - ceph_doc/index.md
+  #   - CEPH文件系统:
+  #     - ceph_doc/ceph_file_system/index.md
+  #     - "CephFS 概念":
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/mds-states.md 
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/posix.md 
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/mds-journaling.md 
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/file-layouts.md 
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/mdcache.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/dynamic-metadata-mangement.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/cephfs-io-path.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/charmap.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/lazyio.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/dirfrags.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/multimds.md
+  #       - ceph_doc/ceph_file_system/cephfs_concepts/snapshots.md
+  #     - "开发者指南":
+  #       - ceph_doc/ceph_file_system/developer-guides/capabilities.md
+  #       - ceph_doc/ceph_file_system/developer-guides/journaler.md
 
-    - CEPH架构: ceph_doc/architecture/architecture.md 
+  #   - CEPH架构: ceph_doc/architecture/architecture.md 
   - 数据结构与算法: 
     - lc/index.md
     - 数据结构与算法:
