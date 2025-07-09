@@ -6,8 +6,9 @@ draft: false
 ---
 
 # MinIO: 本地文件组织
----
-![](./images/minio.png)
+
+![](./assert/minio.png)
+
 根据MinIO文档，MinIO对存储的要求如下：
 
 - 使用本地存储而不是NAS等网络存储。

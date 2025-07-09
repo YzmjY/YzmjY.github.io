@@ -7,7 +7,7 @@ draft: false
 
 # MinIO: 元数据组织
 ---
-![](./images/minio.png)
+![](./assert/minio.png)
 
 ## Object元数据
 MinIO的元数据对应xl.meta文件，该文件记录了一个Object的所有元数据条目，包括多版本、删除标记等。
