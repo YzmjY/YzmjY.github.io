@@ -7,7 +7,7 @@ draft: false
 
 # MinIO: 通信框架-Grid
 ---
-![](./assert/minio.png)
+![](../assert/minio.png)
 ## 简介
 Grid 是 MinIO 中的一个内部通信框架，用于在分布式部署环境中实现节点间的高效通信。它提供了一个基于 WebSocket 的双向通信系统，支持单次请求-响应模式和流式通信模式，使得 MinIO 集群中的不同节点能够可靠地交换数据和执行远程操作。
 

@@ -7,7 +7,7 @@ draft: false
 
 # MinIO: 本地文件组织
 
-![](./assert/minio.png)
+![](../assert/minio.png)
 
 根据MinIO文档，MinIO对存储的要求如下：
 

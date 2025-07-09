@@ -7,7 +7,7 @@ draft: false
 
 # MinIO: mc 工具常用命令
 
-![](./assert/minio.png)
+![](../assert/minio.png)
 `mc` 命令行工具为 `ls`、`cat`、`cp`、`mirror` 和 `diff` 等 `UNIX` 命令提供了一种现代替代方案，同时支持本地文件系统和与 Amazon S3 兼容的云存储服务。
 
 <!-- more -->

@@ -8,7 +8,7 @@ draft: false
 
 # MinIO: 数据修复
 ---
-![](./assert/minio.png)
+![](../assert/minio.png)
 ## 概念
 Healing是指MINIO恢复已损坏、部分丢失的对象的能力。损坏的类型包括：
 
@@ -64,7 +64,7 @@ type ObjectLayer interface {
 ### HealObject
 `HealObject`从Pool层开始调用，并发请求每个Pool，每个Pool内按照hash确定Object所属Set，对应Set执行修复流程，修复主流程如下：
 
-![healObject](./images/minio_healobject.png)
+![healObject](../assert/minio_healobject.png)
 
 上述流程中：
 
@@ -485,7 +485,7 @@ func (f *folderScanner) scanFolder(ctx context.Context, folder cachedFolder, int
 
 MINIO提供Admin API，进行手动触发数据恢复。
 
-![cmd](../minio/images/mc_admin_heal.png)
+![cmd](../assert/mc_admin_heal.png)
 
 实现为将Heal请求组织成一个Seq，放入全局的`globalAllHealState`的healSeqMap中，由后台worker去执行数据恢复任务。
 此外，在API Handler内，会对请求heal的Path进行校验，如果当前队列中已经有同名的Seq，则返回当前Seq的状态，不会重复添加任务。
@@ -498,7 +498,7 @@ MINIO提供Admin API，进行手动触发数据恢复。
 
 通过S3API，分片上传1GB的文件，分片大小指定为64MB。
 
-![object](./images/minio_heal_full.png)
+![object](../assert/minio_heal_full.png)
 
 查看xl.meta数据，确定其数据分片与校验码分片分布：
 
@@ -535,28 +535,28 @@ MINIO提供Admin API，进行手动触发数据恢复。
 
 - 删除3号节点部分数据，验证数据分片损坏，GET请求会修复数据。
   删除部分part:
-  ![delete-data-shard](./images/minio_heal_delete_data_part.png)
+  ![delete-data-shard](../assert/minio_heal_delete_data_part.png)
 
   通过S3API 触发GET请求，读取成功。
 
   查看目标节点上分片数据，已恢复：
-  ![recover-data-shard](./images/minio_heal_delete_data_part_recovery.png)
+  ![recover-data-shard](../assert/minio_heal_delete_data_part_recovery.png)
 
 - 删除2号节点部分数据，验证校验分片损坏，不会进行修复。
   删除部分part:
-  ![delete-check-shard](./images/minio_heal_delete_parity_part.png)
+  ![delete-check-shard](../assert/minio_heal_delete_parity_part.png)
 
   通过S3API 触发GET请求，读取成功。
 
   查看目标节点上分片数据，未恢复：
-  ![recover-check-shard](./images/minio_heal_delete_parity_part_no_recovery.png)
+  ![recover-check-shard](../assert/minio_heal_delete_parity_part_no_recovery.png)
 
 ### 验证手动恢复
 
 对上述校验分片缺失的bucket手动执行heal操作：
 
-![mc-admin-heal](./images/mc_admin_heal_ops.png)
+![mc-admin-heal](../assert/mc_admin_heal_ops.png)
 
 查看目标节点上分片数据，已恢复：
 
-![mc-admin-heal-recovery](./images/mc_admin_heal_result.png)
+![mc-admin-heal-recovery](../assert/mc_admin_heal_result.png)
