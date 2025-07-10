@@ -1,6 +1,8 @@
 ---
 date: 2025-07-03
-draft: true
+categories:
+  - Linux
+draft: false
 ---
 
 # Linux 文件系统
