@@ -7,8 +7,11 @@ draft: false
 
 
 # MinIO: 数据修复
----
+
 ![](../assert/minio.png)
+
+<!-- more -->
+
 ## 概念
 Healing是指MINIO恢复已损坏、部分丢失的对象的能力。损坏的类型包括：
 
@@ -18,7 +21,6 @@ Healing是指MINIO恢复已损坏、部分丢失的对象的能力。损坏的�
 
 MINIO会在以下情况下，触发数据修复流程：
 
-<!-- more -->
 
 ### GET请求期间
 

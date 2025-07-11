@@ -11,11 +11,14 @@ draft: false
 /// caption
 ///
 
-## 磁盘与分区
-
-在 Linux 下，对 SCSI 和 SATA 磁盘设备是以 sd 命名的，第一个 scsi 设备是 sda，第二个是 sdb，依此类推。一般主板上有两个SCSI接口，因此一共可以安装四个SCSI设备。主 SCSI 上的两个设备分别对应 sda 和 sdb，第二个 SCSI 口上的两个设备对应 sdc 和 sdd。一般硬盘安装在主 SCSI 的主接口上，所以是 sda 或者 sdb，而光驱一般安装在第二个SCSI的主接口上，所以是 sdc。（IDE 接口设备是用 hd 命名的，第一个设备是 hda，第二个是 hdb，依此类推。NVMe 硬盘命名规则为 nvme[0-9]n[1-9] ，其中 nvme 是固定的前缀，第一个数字表示控制器的编号， n 是固定字符，第二个数字表示该控制器下的命名空间编号。）
+本文记录一下 Linux 下文件系统的一些基础概念。
 
 <!-- more -->
+
+## 磁盘与分区
+
+在 Linux 下，对 SCSI 和 SATA 磁盘设备是以 sd 命名的，第一个 scsi 设备是 sda，第二个是 sdb，依此类推。IDE 接口设备是用 hd 命名的，第一个设备是 hda，第二个是 hdb，依此类推。NVMe 硬盘命名规则为 nvme[0-9]n[1-9]，其中 nvme 是固定的前缀，第一个数字表示控制器的编号， n 是固定字符，第二个数字表示该控制器下的命名空间编号。
+
 
 分区（Partition）是指对一块磁盘子分区的划分，每个分区可以被格式化为不同的文件系统，分区是用设备名称加数字命名的。例如 hda1 代表 hda 这个硬盘设备上的第一个分区。 每个硬盘可以最多有四个主分区，作用是 1-4 命名硬盘的主分区。多个主分区中只能有一个 active 主分区作为启动分区。逻辑分区是从 5 开始的，每多一个分区，每个磁盘上最多可以有 24 个扩展分区。 
 
@@ -77,7 +80,7 @@ mount /dev/sda1 /test
 ///
 
 
-为支持不同的文件系统实现，Linux 在具体的文件系统和用户之间建立了一个虚拟文件系统的抽象层（Virtual Filesystem,VFS）。不同的文件系统实现向 VFS 注册自己的实现，用户对文件进行操作时，VFS 根据其文件系统的类型调用不会的操作函数。
+为支持不同的文件系统实现，Linux 在具体的文件系统和用户之间建立了一个虚拟文件系统的抽象层（Virtual Filesystem,VFS）。不同的文件系统实现向 VFS 注册自己的实现，用户对文件进行操作时，VFS 根据其文件系统的类型调用不同的操作函数。
 
 ![](../assert/fs.png)
 /// caption
@@ -161,10 +164,17 @@ NFS 服务器的端口默认为 2049。
 
 相关命令：
 
-- `exportfs`：
-- `nfsstat`：
-- `rpcinfo`：
-- `showmount`：
+- `exportfs`：NFS 服务器端用来管理和显示已导出的（shared）文件系统目录。
+- `nfsstat`：通常位于 /usr/sbin/nfsstat，用于查看 NFS 服务器的状态。
+- `rpcinfo`：查看 RPC 信息。
+- `showmount`：查看当前挂载的 NFS 共享目录。
+
+想要挂载 NFS ，客户端需要安装 NFS 客户端软件。在基于 Debian/Ubuntu 的系统上，执行：
+```bash
+sudo apt update
+sudo apt install nfs-common
+```
+
 
 ### NFS-Ganesha
 NFS-Ganesha 是一个用户态的 NFS 服务器实现。对比 Linux 内核 NFS 实现，用户态的 NFS 服务器实现有以下优势：
@@ -204,11 +214,28 @@ NFS-Ganesha 的整体架构图如下：
 
 
 ## FUSE
-FUSE(filesystem in userspace),是一个用户空间的文件系统。通过 FUSE 内核模块的支持，开发者只需要根据 FUSE 提供的接口实现具体的文件操作就可以实现一个文件系统。由于其主要实现代码位于用户空间中，而不需要重新编译内核，这给开发者带来了众多便利。
+FUSE（filesystem in userspace）,是一个用户空间的文件系统。通过 FUSE 内核模块的支持，开发者只需要根据 FUSE 提供的接口实现具体的文件操作就可以实现一个文件系统。由于其主要实现代码位于用户空间中，而不需要重新编译内核，这给开发者带来了众多便利。
 
 ![](../assert/fuse.png)
 /// caption
 ///
+
+FUSE 的核心由两部分组成：FUSE 内核模块和 FUSE 用户态库（libfuse）。用户可以根据 libfuse 提供的 API，实现一个用户态的守护进程，处理来自内核模块的文件操作调用。
+
+一个 FUSE 对应一个用户态的守护进程，该进程启动后会向`/dev/fuse`获取 mount fd，将 FUSE mount 到一个挂载点上，而后通过该挂载点与 FUSE 交互。FUSE 对于文件读写的处理逻辑大致为流程为：
+
+- 内核模块注册一个字符设备 `/dev/fuse` 作为内核和用户态的通信通道，守护进程调用 `read()` 从该设备读取数据，当无数据时，`read()` 阻塞，守护进程挂起释放 CPU。
+- 当用户的应用程序发起文件操作时，调用 libc 和系统调用进入 VFS 层，VFS层将请求转发到 FUSE 内核模块，FUSE 内核模块会将请求封装成特定格式的消息，写入 `/dev/fuse` 设备，之后`/dev/fuse`可读，守护进程被唤醒，读取对应的消息。
+- 守护进程读取到消息之后，对文件操作进行响应，此时对文件的处理函数位于用户态。
+- 处理完成之后，守护进程将结果通过 `write()` 写入 `/dev/fuse` 设备，内核模块会将数据复制到用户态，应用程序即可获取到处理结果。
+
+虽然只有一个 `/dev/fuse` 设备节点，但不同的 FUSE 守护进程打开它会拿到不同的 mount fd，内核根据不同的 fd 区分不同的 FUSE 实例，这样就可以将操作正确的分发到对应的 FUSE 实例上。
+
+一些 FUSE 实现：
+
+- [JuiceFS](https://juicefs.com/zh-cn/)
+- [Goofys](https://github.com/kahing/goofys)
+- [Geesefs](https://github.com/yandex-cloud/geesefs)
 
 ## 参考
 - https://www.cnblogs.com/cxuanBlog/p/12565601.html

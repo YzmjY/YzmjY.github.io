@@ -2,7 +2,7 @@
 date: 2025-07-10
 categories:
   - Linux
-draft: true
+draft: false
 ---
 
 # Linux: Systemd
@@ -11,6 +11,10 @@ draft: true
 /// caption
 ///
 
+本文记录一下 systemd 基本的使用方法。
+<!-- more -->
+
+## Systemd 概述
 systemd 是 Linux 系统工具，用来启动守护进程。历史上，Linux 下守护进程一直采用 init 进程去启动，例如以下命令：
 ```bash
 $ sudo /etc/init.d/apache2 start
@@ -21,13 +25,11 @@ $ service apache2 start
 ```
 service 命令本身是一个 shell 脚本，它在 /etc/init.d/ 目录查找指定的服务脚本，然后调用该服务脚本来完成任务。
 
+
 这种方法有两个缺点:
 
 - 启动时间长：init 进程是串行启动，只有前一个进程启动完，才会启动下一个进程；
 - 启动脚本复杂：init 进程只是执行启动脚本，不管其他事情。脚本需要自己处理各种情况，这往往使得脚本变得很长。
-
-
-## Systemd 概述
 
 Systemd 就是为了解决这些问题而诞生的。它的设计目标是，为系统的启动和管理提供一套完整的解决方案。根据 Linux 惯例，字母 d 是守护进程（daemon）的缩写。 「Systemd 」这个名字的含义，就是它要守护整个系统。
 
@@ -38,6 +40,7 @@ Systemd 就是为了解决这些问题而诞生的。它的设计目标是，为
 Systemd 可以管理所有统资源。不同的资源统称为 Unit（单位）。
 
 Unit 一共分成12种：
+
 - Service Unit：系统服务
 - Target Unit：多个 Unit 构成的一个组
 - Device Unit：硬件设备
@@ -136,42 +139,66 @@ $ systemctl list-dependencies --all nginx.service
 ### 概述
 每一个 Unit 都有一个配置文件，告诉 Systemd 怎么启动这个 Unit 。
 Systemd 默认从目录/etc/systemd/system/读取配置文件。但是，里面存放的大部分文件都是符号链接，指向目录/usr/lib/systemd/system/，真正的配置文件存放在那个目录。
+
 「systemctl enable」命令用于在上面两个目录之间，建立符号链接关系。
+
+```bash
 $ sudo systemctl enable clamd@scan.service
 # 等同于
 $ sudo ln -s '/usr/lib/systemd/system/clamd@scan.service' '/etc/systemd/system/multi-user.target.wants/clamd@scan.service'
+```
+
 如果配置文件里面设置了开机启动，「systemctl enable」命令相当于激活开机启动。
 与之对应的，「systemctl disable」命令用于在两个目录之间，撤销符号链接关系，相当于撤销开机启动。
+```bash
 $ sudo systemctl disable clamd@scan.service
-配置文件的后缀名，就是该 Unit 的种类，比如sshd.socket。如果省略，Systemd 默认后缀名为.service，所以sshd会被理解成sshd.service。
-对于支持Systemd的软件，安装时都会在/usr/lib/systemd/system目录添加一个配置文件。通过systemctl enable可以创建符号链接到systemd读取的目录下，实现开机自启。
-3.1.3.2 配置文件的状态
+```
+
+配置文件的后缀名，就是该 Unit 的种类，比如 sshd.socket。如果省略，Systemd 默认后缀名为 .service，所以sshd会被理解成 sshd.service。
+
+对于支持 Systemd 的软件，安装时都会在 /usr/lib/systemd/system 目录添加一个配置文件。通过 systemctl enable 可以创建符号链接到 systemd 读取的目录下，实现开机自启。
+
+### 配置文件的状态
 「systemctl list-unit-files」命令用于列出所有配置文件。
+```bash
 # 列出所有配置文件
 $ systemctl list-unit-files
-
 # 列出指定类型的配置文件
 $ systemctl list-unit-files --type=service
+```
 这个命令会输出一个列表。
+```bash
 $ systemctl list-unit-files
 
 UNIT FILE              STATE
 chronyd.service        enabled
 clamd@.service         static
 clamd@scan.service     disabled
+```
+
 这个列表显示每个配置文件的状态，一共有四种。
-● enabled：已建立启动链接
-● disabled：没建立启动链接
-● static：该配置文件没有[Install]部分（无法执行），只能作为其他配置文件的依赖
-● masked：该配置文件被禁止建立启动链接
-注意，从配置文件的状态无法看出，该 Unit 是否正在运行。这必须执行前面提到的systemctl status命令。
+
+- enabled：已建立启动链接
+- disabled：没建立启动链接
+- static：该配置文件没有[Install]部分（无法执行），只能作为其他配置文件的依赖
+- masked：该配置文件被禁止建立启动链接
+
+注意，从配置文件的状态无法看出，该 Unit 是否正在运行。这必须执行前面提到的 systemctl status 命令。
+```bash
 $ systemctl status bluetooth.service
-一旦修改配置文件，就要让 SystemD 重新加载配置文件，然后重新启动，否则修改不会生效。
+```
+
+一旦修改配置文件，就要让 Systemd 重新加载配置文件，然后重新启动，否则修改不会生效。
+```bash
 $ sudo systemctl daemon-reload
 $ sudo systemctl restart httpd.service
-3.1.2.3 配置文件的格式
+```
+
+### 配置文件的格式
 配置文件就是普通的文本文件，可以用文本编辑器打开。
+
 「systemctl cat」命令可以查看配置文件的内容。
+```bash
 $ systemctl cat atd.service
 
 [Unit]
@@ -183,54 +210,66 @@ ExecStart=/usr/bin/atd
 
 [Install]
 WantedBy=multi-user.target
-从上面的输出可以看到，配置文件分成几个区块。每个区块的第一行，是用方括号表示的区别名，比如[Unit]。注意，配置文件的区块名和字段名，都是大小写敏感的。
+```
+
+从上面的输出可以看到，配置文件分成几个区块。每个区块的第一行，是用方括号表示的区别名，比如 [Unit]。注意，配置文件的区块名和字段名，都是大小写敏感的。
 每个区块内部是一些等号连接的键值对。
+```bash
 [Section]
 Directive1=value
 Directive2=value
-
-. . .
+```
 注意，键值对的等号两侧不能有空格。
-3.1.2.4 配置文件的区块
+
+### 配置文件的区块
+
 [Unit]区块通常是配置文件的第一个区块，用来定义 Unit 的元数据，以及配置与其他 Unit 的关系。它的主要字段如下。
-● Description：简短描述
-● Documentation：文档地址
-● Requires：当前 Unit 依赖的其他 Unit，如果它们没有运行，当前 Unit 会启动失败
-● Wants：与当前 Unit 配合的其他 Unit，如果它们没有运行，当前 Unit 不会启动失败
-● BindsTo：与Requires类似，它指定的 Unit 如果退出，会导致当前 Unit 停止运行
-● Before：如果该字段指定的 Unit 也要启动，那么必须在当前 Unit 之后启动
-● After：如果该字段指定的 Unit 也要启动，那么必须在当前 Unit 之前启动
-● Conflicts：这里指定的 Unit 不能与当前 Unit 同时运行
-● Condition...：当前 Unit 运行必须满足的条件，否则不会运行
-● Assert...：当前 Unit 运行必须满足的条件，否则会报启动失败
-[Install]通常是配置文件的最后一个区块，用来定义如何启动，以及是否开机启动。它的主要字段如下。
-● WantedBy：它的值是一个或多个 Target，当前 Unit 激活时（enable）符号链接会放入/etc/systemd/system目录下面以 Target 名 + .wants后缀构成的子目录中
-● RequiredBy：它的值是一个或多个 Target，当前 Unit 激活时，符号链接会放入/etc/systemd/system目录下面以 Target 名 + .required后缀构成的子目录中
-● Alias：当前 Unit 可用于启动的别名
-● Also：当前 Unit 激活（enable）时，会被同时激活的其他 Unit
-[Service]区块用来 Service 的配置，只有 Service 类型的 Unit 才有这个区块。它的主要字段如下。
-● Type：定义启动时的进程行为。它有以下几种值。
-● Type=simple：默认值，执行ExecStart指定的命令，启动主进程
-● Type=forking：以 fork 方式从父进程创建子进程，创建后父进程会立即退出
-● Type=oneshot：一次性进程，Systemd 会等当前服务退出，再继续往下执行
-● Type=dbus：当前服务通过D-Bus启动
-● Type=notify：当前服务启动完毕，会通知Systemd，再继续往下执行
-● Type=idle：若有其他任务执行完毕，当前服务才会运行
-● ExecStart：启动当前服务的命令
-● ExecStartPre：启动当前服务之前执行的命令
-● ExecStartPost：启动当前服务之后执行的命令
-● ExecReload：重启当前服务时执行的命令
-● ExecStop：停止当前服务时执行的命令
-● ExecStopPost：停止当其服务之后执行的命令
-● RestartSec：自动重启当前服务间隔的秒数
-● Restart：定义何种情况 Systemd 会自动重启当前服务，可能的值包括always（总是重启）、on-success、on-failure、on-abnormal、on-abort、on-watchdog
-● TimeoutSec：定义 Systemd 停止当前服务之前等待的秒数
-● Environment：指定环境变量
+
+- Description：简短描述
+- Documentation：文档地址
+- Requires：当前 Unit 依赖的其他 Unit，如果它们没有运行，当前 Unit 会启动失败
+- Wants：与当前 Unit 配合的其他 Unit，如果它们没有运行，当前 Unit 不会启动失败
+- BindsTo：与Requires类似，它指定的 Unit 如果退出，会导致当前 Unit 停止运行
+- Before：如果该字段指定的 Unit 也要启动，那么必须在当前 Unit 之后启动
+- After：如果该字段指定的 Unit 也要启动，那么必须在当前 Unit 之前启动
+- Conflicts：这里指定的 Unit 不能与当前 Unit 同时运行
+- Condition...：当前 Unit 运行必须满足的条件，否则不会运行
+- Assert...：当前 Unit 运行必须满足的条件，否则会报启动失败
+
+[Install] 通常是配置文件的最后一个区块，用来定义如何启动，以及是否开机启动。它的主要字段如下。
+- WantedBy：它的值是一个或多个 Target，当前 Unit 激活时（enable）符号链接会放入/etc/systemd/system目录下面以 Target 名 + .wants后缀构成的子目录中
+- RequiredBy：它的值是一个或多个 Target，当前 Unit 激活时，符号链接会放入/etc/systemd/system目录下面以 Target 名 + .required后缀构成的子目录中
+- Alias：当前 Unit 可用于启动的别名
+- Also：当前 Unit 激活（enable）时，会被同时激活的其他 Unit
+
+[Service] 区块用来 Service 的配置，只有 Service 类型的 Unit 才有这个区块。它的主要字段如下。
+- Type：定义启动时的进程行为。它有以下几种值。
+- Type=simple：默认值，执行ExecStart指定的命令，启动主进程
+- Type=forking：以 fork 方式从父进程创建子进程，创建后父进程会立即退出
+- Type=oneshot：一次性进程，Systemd 会等当前服务退出，再继续往下执行
+- Type=dbus：当前服务通过D-Bus启动
+- Type=notify：当前服务启动完毕，会通知Systemd，再继续往下执行
+- Type=idle：若有其他任务执行完毕，当前服务才会运行
+- ExecStart：启动当前服务的命令
+- ExecStartPre：启动当前服务之前执行的命令
+- ExecStartPost：启动当前服务之后执行的命令
+- ExecReload：重启当前服务时执行的命令
+- ExecStop：停止当前服务时执行的命令
+- ExecStopPost：停止当其服务之后执行的命令
+- RestartSec：自动重启当前服务间隔的秒数
+- Restart：定义何种情况 Systemd 会自动重启当前服务，可能的值包括always（总是重启）、on-success、on-failure、on-abnormal、on-abort、on-watchdog
+- TimeoutSec：定义 Systemd 停止当前服务之前等待的秒数
+- Environment：指定环境变量
+
 Unit 配置文件的完整字段清单，请参考官方文档。
-3.1.4 Target
+
+## Target
 启动计算机的时候，需要启动大量的 Unit。如果每一次启动，都要一一写明本次启动需要哪些 Unit，显然非常不方便。Systemd 的解决方案就是 Target。
+
 简单说，Target 就是一个 Unit 组，包含许多相关的 Unit 。启动某个 Target 的时候，Systemd 就会启动里面所有的 Unit。从这个意义上说，Target 这个概念类似于"状态点"，启动某个 Target 就好比启动到某种状态。
+
 传统的init启动模式里面，有 RunLevel 的概念，跟 Target 的作用很类似。不同的是，RunLevel 是互斥的，不可能多个 RunLevel 同时启动，但是多个 Target 可以同时启动。
+```bash
 # 查看当前系统的所有 Target
 $ systemctl list-unit-files --type=target
 
@@ -247,7 +286,10 @@ $ sudo systemctl set-default multi-user.target
 # systemctl isolate 命令改变这种行为，
 # 关闭前一个 Target 里面所有不属于后一个 Target 的进程
 $ sudo systemctl isolate multi-user.target
+```
+
 Target 与 传统 RunLevel 的对应关系如下。
+```bash
 Traditional runlevel      New target name     Symbolically linked to...
 
 Runlevel 0           |    runlevel0.target -> poweroff.target
@@ -257,13 +299,20 @@ Runlevel 3           |    runlevel3.target -> multi-user.target
 Runlevel 4           |    runlevel4.target -> multi-user.target
 Runlevel 5           |    runlevel5.target -> graphical.target
 Runlevel 6           |    runlevel6.target -> reboot.target
+```
+
 它与init进程的主要差别如下。
-（1）默认的 RunLevel（在/etc/inittab文件设置）现在被默认的 Target 取代，位置是/etc/systemd/system/default.target，通常符号链接到graphical.target（图形界面）或者multi-user.target（多用户命令行）。
-（2）启动脚本的位置，以前是/etc/init.d目录，符号链接到不同的 RunLevel 目录 （比如/etc/rc3.d、/etc/rc5.d等），现在则存放在/lib/systemd/system和/etc/systemd/system目录。
-（3）配置文件的位置，以前init进程的配置文件是/etc/inittab，各种服务的配置文件存放在/etc/sysconfig目录。现在的配置文件主要存放在/lib/systemd目录，在/etc/systemd目录里面的修改可以覆盖原始设置。
-3.1.5 日志管理
-Systemd 统一管理所有 Unit 的启动日志。带来的好处就是，可以只用「journalctl」一个命令，查看所有日志（内核日志和应用日志）。日志的配置文件是/etc/systemd/journald.conf。
-journalctl功能强大，用法非常多。
+
+- 默认的 RunLevel（在 /etc/inittab 文件设置）现在被默认的 Target 取代，位置是 /etc/systemd/system/default.target，通常符号链接到 graphical.target（图形界面）或者 multi-user.target（多用户命令行）。
+- 启动脚本的位置，以前是 /etc/init.d 目录，符号链接到不同的 RunLevel 目录 （比如 /etc/rc3.d、/etc/rc5.d 等），现在则存放在 /lib/systemd/system 和 /etc/systemd/system 目录。
+- 配置文件的位置，以前 init 进程的配置文件是 /etc/inittab，各种服务的配置文件存放在 /etc/sysconfig 目录。现在的配置文件主要存放在 /lib/systemd 目录，在 /etc/systemd 目录里面的修改可以覆盖原始设置。
+
+## 日志管理
+Systemd 统一管理所有 Unit 的启动日志。带来的好处就是，可以只用「journalctl」一个命令，查看所有日志（内核日志和应用日志）。日志的配置文件是 /etc/systemd/journald.conf。
+
+journalctl 功能强大，用法非常多。
+
+```bash
 # 查看所有日志（默认情况下 ，只保存本次启动的日志）
 $ sudo journalctl
 
@@ -344,3 +393,4 @@ $ sudo journalctl --vacuum-size=1G
 
 # 指定日志文件保存多久
 $ sudo journalctl --vacuum-time=1years
+```
