@@ -5,7 +5,7 @@ categories:
 draft: false
 ---
 
-# Linux 文件系统
+# Linux: 文件系统
 
 ![](../assert/linux-logo.png)
 /// caption
@@ -13,23 +13,22 @@ draft: false
 
 ## 磁盘与分区
 
-在 Linux 下，对 SCSI 和 SATA 磁盘设备是以 sd 命名的，第一个 scsi 设备是 sda，第二个是 sdb，依此类推。一般主板上有两个SCSI接口，因此一共可以安装四个SCSI设备。主 SCSI 上的两个设备分别对应 sda 和 sdb，第二个 SCSI 口上的两个设备对应 sdc 和 sdd。一般硬盘安装在主 SCSI 的主接口上，所以是 sda 或者 sdb，而光驱一般安装在第二个SCSI的主接口上，所以是 sdc。(IDE接口设备是用 hd 命名的，第一个设备是hda，第二个是hdb，依此类推。NVMe 硬盘命名规则为 nvme[0-9]n[1-9] ，其中 nvme 是固定的前缀，第一个数字表示控制器的编号， n 是固定字符，第二个数字表示该控制器下的命名空间编号。)
+在 Linux 下，对 SCSI 和 SATA 磁盘设备是以 sd 命名的，第一个 scsi 设备是 sda，第二个是 sdb，依此类推。一般主板上有两个SCSI接口，因此一共可以安装四个SCSI设备。主 SCSI 上的两个设备分别对应 sda 和 sdb，第二个 SCSI 口上的两个设备对应 sdc 和 sdd。一般硬盘安装在主 SCSI 的主接口上，所以是 sda 或者 sdb，而光驱一般安装在第二个SCSI的主接口上，所以是 sdc。（IDE 接口设备是用 hd 命名的，第一个设备是 hda，第二个是 hdb，依此类推。NVMe 硬盘命名规则为 nvme[0-9]n[1-9] ，其中 nvme 是固定的前缀，第一个数字表示控制器的编号， n 是固定字符，第二个数字表示该控制器下的命名空间编号。）
 
 <!-- more -->
 
-分区（Partition）是指对一块磁盘子分区的划分，每个分区可以被格式化为不同的文件系统，分区是用设备名称加数字命名的。例如 hda1 代表 hda 这个硬盘设备上的第一个分区。 每个硬盘可以最多有四个主分区，作用是 1-4 命名硬盘的主分区。多个主分区中只能有一个 active 主分区作为启动分区。逻辑分区是从5开始的，每多一个分区，每个磁盘上最多可以有 24个扩展分区。 
+分区（Partition）是指对一块磁盘子分区的划分，每个分区可以被格式化为不同的文件系统，分区是用设备名称加数字命名的。例如 hda1 代表 hda 这个硬盘设备上的第一个分区。 每个硬盘可以最多有四个主分区，作用是 1-4 命名硬盘的主分区。多个主分区中只能有一个 active 主分区作为启动分区。逻辑分区是从 5 开始的，每多一个分区，每个磁盘上最多可以有 24 个扩展分区。 
 
 分多个区有以下几个目的：
 
 - 在不损失数据的情况下重装系统，比如独立设置 /home 挂载点，重装系统的时候直接标记回 /home，数据不会有任何损失。
 - 针对不同的挂载点的特性分配合适的文件系统以合理发挥性能，比如对 /var 使用 reiserfs，对 /home 使用 xfs，对 / 使用 ext4。
 - 针对不同的挂载点开启不同的挂载选项，如是否需要即时同步，是否开启日志，是否启用压缩。
-- 大硬盘搜索范围大，效率低
-- 磁盘配额只能对分区做设定
-- /home、/var、/usr/local 经常是单独分区，因为经常会操作，容易产生碎片
+- 大硬盘搜索范围大，效率低。
+- 磁盘配额只能对分区做设定。
+- /home、/var、/usr/local 经常是单独分区，因为经常会操作，容易产生碎片。
 
 可以使用 `fdisk` 命令进行磁盘分区。
-
 
 完成分区之后，需要对分区进行格式化，所谓格式化就是在该分区之上建立文件系统的过程。之后便可以将格式化之后的文件系统挂载到对应的挂载点下。
 
@@ -39,8 +38,7 @@ mkfs -t ext3 /dev/sda1
 ```
 
 
-
-Linux 系统启动之后会将[根文件系统](https://cloud.tencent.com/developer/article/1791275)（rootfs）挂载于文件树的根(/)上。当根挂载完成之后，您就可以将其它文件系统挂载于树形结构各种挂载点上。根结构下的任何目录都可以作为挂载点，而您也可以将同一文件系统同时挂载于不同的挂载点上。挂载点实际上就是linux中的磁盘文件系统的入口目录。
+Linux 系统启动之后会将[根文件系统](https://cloud.tencent.com/developer/article/1791275)（rootfs）挂载于文件树的根(/)上。当根挂载完成之后，您就可以将其它文件系统挂载于树形结构各种挂载点上。根结构下的任何目录都可以作为挂载点，而您也可以将同一文件系统同时挂载于不同的挂载点上。挂载点实际上就是 Linux 中的磁盘文件系统的入口目录。
 
 可以使用 `mount` 命令将文件系统挂载到某一挂载点下：
 ```bash
@@ -55,7 +53,7 @@ mount /dev/sda1 /test
 
 例如：
 ```bash
-/dev/sda1               /test                   ext3     defaults        0 0
+/dev/sda1  /test  ext3  defaults  0  0
 ```
 
 ## 本地文件系统
@@ -67,7 +65,7 @@ mount /dev/sda1 /test
 ///
 
 - **引导块**（Boot block）：为了一致性，每个分区都会从引导块开始，即使引导块不包含操作系统。引导块占据文件系统的前 4096 个字节，从磁盘上的字节偏移量 0 开始。引导块可用于启动操作系统。
-- **超级块**（Superblock）：紧跟在引导块后面的是超级块(Superblock)，超级块的大小为 4096 字节，从磁盘上的字节偏移 4096 开始。超级块包含文件系统的所有关键参数。
+- **超级块**（Superblock）：紧跟在引导块后面的是超级块（Superblock），超级块的大小为 4096 字节，从磁盘上的字节偏移 4096 开始。超级块包含文件系统的所有关键参数。
 - **空闲空间块管理**：用来管理文件系统的空闲块。
 - **inode**：inode 保存了存储对象数据的属性和磁盘块位置。
 - **数据块**：文件内容。
@@ -96,7 +94,7 @@ VFS 中有几个关键概念：
 /// caption
 ///
 
-## NFS
+## 网络文件系统
 
 [NFS](https://baike.baidu.com/item/%E7%BD%91%E7%BB%9C%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/9719420) （Network File System，网络文件系统）最早由 Sun 公司提出。它可以通过网络让不同的主机访问同一个文件系统。
 
@@ -106,10 +104,17 @@ mount -t nfs <NFS 服务器 IP>:/<共享目录> <挂载点>
 ```
 之后你就可以在挂载点目录下访问 NFS 共享目录了，与访问本地文件系统没有任何差异。
 
-
-
 ### 协议发展
-NFS一共发布了3个版本：NFSv2、NFSv3、NFSv4。其中，NFSv4 包含两个次版本 NFSv4.0 和 NFSv4.1。其中常用的为 v3,v4 。简单的对比如下：
+NFS一共发布了3个版本：NFSv2、NFSv3、NFSv4。其中，NFSv4 包含两个次版本 NFSv4.0 和 NFSv4.1。其中常用的为 v3,v4 。
+
+|编号	|版本	|RFC	|时间	|页数|
+|:--:|:--:|:--:|:--:|:--:|
+|1	|NFSv2|	rfc1094|	1989年3月|	27页|
+|2	|NFSv3|	rfc1813|	1995年6月	|126页|
+|3	|NFSv4.0|	rfc3530|	2003年4月|	275页|
+|4	|NFSv4.1|	rfc5661|	2010年1月	|617页|
+
+简单的对比如下：
 
 **功能**
 
@@ -124,6 +129,7 @@ NFS一共发布了3个版本：NFSv2、NFSv3、NFSv4。其中，NFSv4 包含两�
 **请求**
 
 - NFSv4.0 只提供了两个请求 NULL 和 COMPOUND，所有的操作都整合到 COMPOUND 中，客户端可以根据实际请求将多个操作封装到一个 COMPOUND 请求中，增加了灵活性。
+- NFSv4.1 提供并行存储，又被称为 pNFS，NFSv4.1支持并行存储，服务器由一台元数据服务器（MDS）和多台数据服务器（DS）构成，元数据服务器只管理文件在磁盘中的布局，数据传输在客户端和数据服务器之间直接进行。
 
 **命令空间**
 
@@ -148,9 +154,17 @@ NFS一共发布了3个版本：NFSv2、NFSv3、NFSv4。其中，NFSv4 包含两�
     - **管理导出目录的访问控制**：mountd 负责根据服务器上的导出配置（通常是 /etc/exports 文件）检查客户端 IP 地址或者主机名是否允许访问某个导出目录。
     - **维护挂载表信息**：它会记录客户端已经挂载的文件系统信息，便于服务器监控当前的挂载状态。
     - **提供给客户端导出目录列表**：客户端可以通过 mountd 查询服务器上可以挂载的文件系统列表。
-- **idmapd**: 和 NFSv4 协议一起引入并广泛使用的组件，NFSv1、v2、v3 在设计时没有集成 idmap 功能，这些版本主要处理数字 UID/GID。NFSv4 在 [RFC 3530](https://www.rfc-editor.org/rfc/rfc3530.html) 中正式引入了基于字符串的身份标识（如用户名 @域名格式），为此需要一个用户身份映射服务（idmapd），用来在客户端的字符串身份和服务器的数字 UID/GID 之间做转换。
-- **portmapper**: Linux 的 RPC 服务，在客户端请求时，负责响应目的 RPC server 端口返回给客户端，工作在 tcp 与 udp 的 111 端口上
-NFS 服务其的端口默认为 2049，
+- **idmapd**: 和 NFSv4 协议一起引入并广泛使用的组件，NFSv1、v2、v3 在设计时没有集成 idmap 功能，这些版本主要处理数字 UID/GID。NFSv4 在 [RFC 3530](https://www.rfc-editor.org/rfc/rfc3530.html) 中正式引入了基于字符串的身份标识（如用户名@域名格式），为此需要一个用户身份映射服务（idmapd），用来在客户端的字符串身份和服务器的数字 UID/GID 之间做转换。
+- **portmapper**: Linux 的 RPC 服务，在客户端请求时，负责响应目的 RPC server 端口返回给客户端，工作在 TCP 与 UDP 的 111 端口上。
+
+NFS 服务器的端口默认为 2049。
+
+相关命令：
+
+- `exportfs`：
+- `nfsstat`：
+- `rpcinfo`：
+- `showmount`：
 
 ### NFS-Ganesha
 NFS-Ganesha 是一个用户态的 NFS 服务器实现。对比 Linux 内核 NFS 实现，用户态的 NFS 服务器实现有以下优势：
@@ -158,7 +172,7 @@ NFS-Ganesha 是一个用户态的 NFS 服务器实现。对比 Linux 内核 NFS 
 - 灵活的内存分配
 - 更强的移植性
 - 对接 FUSE 文件系统
-- 支持更多的分布式文件系统，如 CEPHFS、GlusterFS 等
+- 支持更多的分布式文件系统，如 CephFS、GlusterFS 等
 
 NFS-Ganesha 的整体架构图如下：
 
@@ -168,17 +182,17 @@ NFS-Ganesha 的整体架构图如下：
 
 `FSAL` 层将不同的后端存储系统进行抽象与上层协议层对接，可以方便进行扩展，目前 Ganesha 支持如下的 `FSAL`:
 
-- CEPH
-- Gluster
-- GPFS
-- VFS
-- XFS
-- Luster
-- RGW
+- CEPH：后端对接 [CephFS](https://docs.ceph.com/en/latest/cephfs/)
+- Gluster：后端对接 [GlusterFS](https://docs.gluster.org/en/latest/)
+- GPFS：后端对接 [GPFS](https://www.ibm.com/docs/en/storage-scale)
+- VFS：对接本地文件系统，它支持任何支持「文件句柄」的 POSIX 兼容操作系统，对于 Linux，它支持在 2.6.39 之后的内核上运行的任何本地文件系统。
+- XFS：这是 FSAL_VFS 的一种变体，仅适用于 xfs 文件系统。它不依赖于内核的 `open_by_handle_at`/`name_to_handle_at` 接口，因为 xfs 提供了自己的接口来处理 NFS 句柄。
+- Luster：这个 FSAL 也是 FSAL_VFS 的一个变体，它使用 LUSTRE 分布式文件系统作为其后端。它目前不支持 pNFS，但计划在未来版本中提供文件布局支持。这是 FSAL_VFS 的特定实现，当前支持是有限的。
+- RGW：
 - KVSFS
 - LIZARDFS
-- Proxy_V3
-- Proxy_V4
+- Proxy_V3：这个 FSAL 会作为其他 NFS 服务器的 NFSv3 客户端运行，它的用途之一是充当 NFSv4.x 和 9P（Plan 9 远程文件系统）客户端到 NFSv3 服务器的网关（代理）。
+- Proxy_V4：这个 FSAL 会作为其他 NFS 服务器的 NFSv4 客户端运行，它的用途之一是充当 NFSv4.x 和 9P（Plan 9 远程文件系统）客户端到 NFSv3 服务器的网关（代理）
 
 参见：[支持的后端存储系统](https://github.com/nfs-ganesha/nfs-ganesha/wiki/Fsalsupport#supported-fsal-backends)
 
@@ -187,11 +201,6 @@ NFS-Ganesha 的整体架构图如下：
 #### NFS 权限控制
 
 #### NFS 常用参数
-
-
-
-
-
 
 
 ## FUSE
@@ -209,3 +218,4 @@ FUSE(filesystem in userspace),是一个用户空间的文件系统。通过 FUSE
 - [深入理解Linux内核——VFS](https://wushifublog.com/2020/05/22/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94VFS/)
 - [NFS-Ganesha 核心架构解读](https://zhuanlan.zhihu.com/p/34833897)
 - [FUSE文件系统](https://www.cnblogs.com/Linux-tech/p/14110335.html)
+- [FUSE，从内核到用户态文件系统的设计之路](https://juicefs.com/zh-cn/blog/engineering/fuse-file-system-design)
