@@ -74,7 +74,11 @@ type RingBuf struct {
 }
 ```
 
-`begin` 和 `end` 指向的是输入数据流中的开始结束索引，`index` 是指rb.data的索引，`index` 总是在区间 [0,len(rb.data)-1] 中。
+`begin` 和 `end` 指向的是输入数据流中的开始结束索引，`index` 是指 rb.data 的索引，`index` 总是在区间 [0,len(rb.data)-1] 中。
+
+![](../assert/freecache-ringbuffer.png){ width="800" }
+/// caption
+///
 
 #### 写入
 数据写入 RingBuffer 即是普通的内存拷贝操作，关键在于如何处理几个索引，假设 RingBuffer 的缓冲区一共 size 字节长度，要写入 n 字节,有如下几种情况。
@@ -125,16 +129,15 @@ Segment 有几个核心的数据结构：
 
 一个 Segment 一共有 256 个 slot，所有 slot 的 cap 是一样的，但实际长度各异。
 
-![](../assert/freecache-segment.png)
+![](../assert/freecache-segment.png){ width="800" }
 /// caption
-Segment 结构图
 ///
 
 #### 写入
 从写入 key 的 64 位 hash 提取出 hash16 以及 slotId。
 ```
-	// hashVal: 32|16		|8		|8
-	// 			  |hash16	|slotId
+// hashVal: 32|16		|8		|8
+// 			  |hash16	|slotId1
 ```
 流程如下：
 
