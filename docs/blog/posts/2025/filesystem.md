@@ -79,6 +79,11 @@ mount /dev/sda1 /test
 /// caption
 ///
 
+### 特殊文件系统
+
+常见的特殊文件系统有：rootfs、proc、sysfs、pipefs、tmpfs等。
+
+### VFS
 
 为支持不同的文件系统实现，Linux 在具体的文件系统和用户之间建立了一个虚拟文件系统的抽象层（Virtual Filesystem,VFS）。不同的文件系统实现向 VFS 注册自己的实现，用户对文件进行操作时，VFS 根据其文件系统的类型调用不同的操作函数。
 
@@ -96,6 +101,9 @@ VFS 中有几个关键概念：
 ![](../assert/vfs-object.png)
 /// caption
 ///
+
+### Namespace
+
 
 ## 网络文件系统
 
@@ -157,7 +165,7 @@ NFS一共发布了3个版本：NFSv2、NFSv3、NFSv4。其中，NFSv4 包含两�
     - **管理导出目录的访问控制**：mountd 负责根据服务器上的导出配置（通常是 /etc/exports 文件）检查客户端 IP 地址或者主机名是否允许访问某个导出目录。
     - **维护挂载表信息**：它会记录客户端已经挂载的文件系统信息，便于服务器监控当前的挂载状态。
     - **提供给客户端导出目录列表**：客户端可以通过 mountd 查询服务器上可以挂载的文件系统列表。
-- **idmapd**: 和 NFSv4 协议一起引入并广泛使用的组件，NFSv1、v2、v3 在设计时没有集成 idmap 功能，这些版本主要处理数字 UID/GID。NFSv4 在 [RFC 3530](https://www.rfc-editor.org/rfc/rfc3530.html) 中正式引入了基于字符串的身份标识（如用户名@域名格式），为此需要一个用户身份映射服务（idmapd），用来在客户端的字符串身份和服务器的数字 UID/GID 之间做转换。
+- **idmapd**: 和 NFSv4 协议一起引入并广泛使用的组件，NFSv2、v3 在设计时没有集成 idmap 功能，这些版本主要处理数字 UID/GID。NFSv4 在 [RFC 3530](https://www.rfc-editor.org/rfc/rfc3530.html) 中正式引入了基于字符串的身份标识（如用户名@域名格式），为此需要一个用户身份映射服务（idmapd），用来在客户端的字符串身份和服务器的数字 UID/GID 之间做转换。
 - **portmapper**: Linux 的 RPC 服务，在客户端请求时，负责响应目的 RPC server 端口返回给客户端，工作在 TCP 与 UDP 的 111 端口上。
 
 NFS 服务器的端口默认为 2049。
