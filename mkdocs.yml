@@ -137,7 +137,7 @@ nav:
         - lc/algo/heap.md
     - 刷题:
       - lc/top-interview-150/index.md
-      - "top150":
+      - "Top150":
         - "数组/字符串":
           - lc/top-interview-150/1_88_合并两个有序数组.md
           - lc/top-interview-150/2_27_移除元素.md

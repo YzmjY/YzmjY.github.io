@@ -80,8 +80,23 @@ mount /dev/sda1 /test
 ///
 
 ### 特殊文件系统
+在 Linux 系统中，除了普通的文件系统，还存在一些「伪文件系统」，这些文件系统并没有对应的磁盘设备，而是一些特殊的目录或文件。
 
-常见的特殊文件系统有：rootfs、proc、sysfs、pipefs、tmpfs等。
+**rootfs**
+
+根文件系统首先是内核启动时所 mount(挂载)的第一个文件系统，内核代码映像文件保存在根文件系统中，系统引导启动程序会在根文件系统挂载之后从中把一些初始化脚本（如rcS,inittab）和服务加载到内存中去运行。正常来说，根文件系统至少包括以下目录：
+
+- /etc/：存储重要的配置文件。 
+- /bin/：存储常用且开机时必须用到的执行文件。 
+- /sbin/：存储着开机过程中所需的系统执行文件。 
+- /lib/：存储/bin/及/sbin/的执行文件所需的链接库，以及Linux的内核模块。 
+- /dev/：存储设备文件。 
+
+五大目录必须存储在根文件系统上，缺一不可。
+
+
+**proc**
+Linux系统上的/proc目录是一种文件系统，即proc文件系统。与其它常见的文件系统不同的是，/proc是一种伪文件系统（也即虚拟文件系统），存储的是当前内核运行状态的一系列特殊文件，用户可以通过这些文件查看有关系统硬件及当前正在运行进程的信息，甚至可以通过更改其中某些文件来改变内核的运行状态。
 
 ### VFS
 
@@ -248,6 +263,8 @@ FUSE 的核心由两部分组成：FUSE 内核模块和 FUSE 用户态库（libf
 ## 参考
 - https://www.cnblogs.com/cxuanBlog/p/12565601.html
 - https://www.cnblogs.com/kuangdaoyizhimei/p/18311375
+- [rootfs根文件系统制作及挂载方法-详解](https://zhuanlan.zhihu.com/p/637951209)
+- [proc](https://www.cnblogs.com/cute/archive/2011/04/20/2022280.html)
 - [Windows/Linux文件系统类型介绍](https://zhuanlan.zhihu.com/p/683346517)
 - [xfs](https://mirrors.edge.kernel.org/pub/linux/utils/fs/xfs/docs/xfs_filesystem_structure.pdf)
 - [深入理解Linux内核——VFS](https://wushifublog.com/2020/05/22/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3Linux%E5%86%85%E6%A0%B8%E2%80%94%E2%80%94VFS/)

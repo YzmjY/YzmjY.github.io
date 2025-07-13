@@ -223,7 +223,7 @@ Directive2=value
 
 ### 配置文件的区块
 
-[Unit]区块通常是配置文件的第一个区块，用来定义 Unit 的元数据，以及配置与其他 Unit 的关系。它的主要字段如下。
+**[Unit]** 区块通常是配置文件的第一个区块，用来定义 Unit 的元数据，以及配置与其他 Unit 的关系。它的主要字段如下。
 
 - Description：简短描述
 - Documentation：文档地址
@@ -236,13 +236,15 @@ Directive2=value
 - Condition...：当前 Unit 运行必须满足的条件，否则不会运行
 - Assert...：当前 Unit 运行必须满足的条件，否则会报启动失败
 
-[Install] 通常是配置文件的最后一个区块，用来定义如何启动，以及是否开机启动。它的主要字段如下。
+**[Install]** 通常是配置文件的最后一个区块，用来定义如何启动，以及是否开机启动。它的主要字段如下。
+
 - WantedBy：它的值是一个或多个 Target，当前 Unit 激活时（enable）符号链接会放入/etc/systemd/system目录下面以 Target 名 + .wants后缀构成的子目录中
 - RequiredBy：它的值是一个或多个 Target，当前 Unit 激活时，符号链接会放入/etc/systemd/system目录下面以 Target 名 + .required后缀构成的子目录中
 - Alias：当前 Unit 可用于启动的别名
 - Also：当前 Unit 激活（enable）时，会被同时激活的其他 Unit
 
-[Service] 区块用来 Service 的配置，只有 Service 类型的 Unit 才有这个区块。它的主要字段如下。
+**[Service]** 区块用来 Service 的配置，只有 Service 类型的 Unit 才有这个区块。它的主要字段如下。
+
 - Type：定义启动时的进程行为。它有以下几种值。
 - Type=simple：默认值，执行ExecStart指定的命令，启动主进程
 - Type=forking：以 fork 方式从父进程创建子进程，创建后父进程会立即退出
