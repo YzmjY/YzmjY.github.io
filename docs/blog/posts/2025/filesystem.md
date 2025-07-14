@@ -84,19 +84,20 @@ mount /dev/sda1 /test
 
 **rootfs**
 
-根文件系统首先是内核启动时所 mount(挂载)的第一个文件系统，内核代码映像文件保存在根文件系统中，系统引导启动程序会在根文件系统挂载之后从中把一些初始化脚本（如rcS,inittab）和服务加载到内存中去运行。正常来说，根文件系统至少包括以下目录：
+根文件系统首先是内核启动时所 mount(挂载)的第一个文件系统，内核代码映像文件保存在根文件系统中，系统引导启动程序会在根文件系统挂载之后从中把一些初始化脚本（如rcS,inittab）和服务加载到内存中去运行。完成 rootfs 挂载及系统初始化之后，可以通过挂载其他文件系统来扩展文件系统的功能。
 
-- /etc/：存储重要的配置文件。 
-- /bin/：存储常用且开机时必须用到的执行文件。 
-- /sbin/：存储着开机过程中所需的系统执行文件。 
-- /lib/：存储/bin/及/sbin/的执行文件所需的链接库，以及Linux的内核模块。 
-- /dev/：存储设备文件。 
+根文件系统的 mount 过程分为2个阶段：
 
-五大目录必须存储在根文件系统上，缺一不可。
+- 内核 mount 一个特殊的文件系统——rootfs，它提供了一个空的路径作为初始的挂载点
+- 内核 mount 实际的文件系统系统，覆盖之前的空路径
 
+内核之所以搞一个 rootfs 这样一个特殊的文件系统，而不是直接使用实际的文件系统作为根文件系统，其原因是为了方便在系统运行时更换根文件系统。目前用于启动的 Ramdisk 就是这样一个例子，在系统起来后，先加载一个包含最小驱动文件和启动脚本的 Ramdisk 文件系统作为根文件系统，然后将系统中其他的设备加载起来后，再选择一个完整的文件系统替换这个最小系统。
+
+关于 rootfs:[Chapter 3. The Root Filesystem](https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03.html)
 
 **proc**
-Linux系统上的/proc目录是一种文件系统，即proc文件系统。与其它常见的文件系统不同的是，/proc是一种伪文件系统（也即虚拟文件系统），存储的是当前内核运行状态的一系列特殊文件，用户可以通过这些文件查看有关系统硬件及当前正在运行进程的信息，甚至可以通过更改其中某些文件来改变内核的运行状态。
+
+Linux 系统上的 /proc 目录是一种文件系统，即 proc 文件系统。与其它常见的文件系统不同的是，/proc 是一种伪文件系统（也即虚拟文件系统），存储的是当前内核运行状态的一系列特殊文件，用户可以通过这些文件查看有关系统硬件及当前正在运行进程的信息，甚至可以通过更改其中某些文件来改变内核的运行状态。
 
 ### VFS
 
@@ -119,6 +120,7 @@ VFS 中有几个关键概念：
 
 ### Namespace
 
+Linux 有 [Namespace](https://man7.org/linux/man-pages/man7/namespaces.7.html) 的概念，不同 Namespace 的挂载点互不影响，在 VFS 中，进程中的文件系统 Namespace 信息通过一个 Namespace 数据结构进行存储。`list` 字段是一个链接了所有属于这个 Namespace 的文件系统的链表，而 `root` 字段则是表示这个 Namespace 的根文件系统。
 
 ## 网络文件系统
 
@@ -264,6 +266,7 @@ FUSE 的核心由两部分组成：FUSE 内核模块和 FUSE 用户态库（libf
 - https://www.cnblogs.com/cxuanBlog/p/12565601.html
 - https://www.cnblogs.com/kuangdaoyizhimei/p/18311375
 - [rootfs根文件系统制作及挂载方法-详解](https://zhuanlan.zhihu.com/p/637951209)
+- https://www.kernel.org/doc/Documentation/filesystems/ramfs-rootfs-initramfs.txt
 - [proc](https://www.cnblogs.com/cute/archive/2011/04/20/2022280.html)
 - [Windows/Linux文件系统类型介绍](https://zhuanlan.zhihu.com/p/683346517)
 - [xfs](https://mirrors.edge.kernel.org/pub/linux/utils/fs/xfs/docs/xfs_filesystem_structure.pdf)

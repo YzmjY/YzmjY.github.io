@@ -52,19 +52,33 @@ PV Controller、AD Controller、Volume Manager 主要是进行操作的调用，
 
 ![](../assert/k8s_持久化卷创建过程.png)
 
+- 用户创建一个包含 PVC 的 Pod
+- PV Controller 观察到 UnBound 的 PVC， PV Controller 会去集群找一个合适的 PV，如果找不到，则调用 Volume Plugin 去做 Provision，之后创建一个 PV，将该 PV 与 PVC 绑定。
+- Scheduler 完成 Pod 的调度。
+- AD Controller 调用 VolumePlugin 将 PV Attach 到节点上。
+- Volume Manager 将 PV mount 到 Pod 在节点上对应的一个子目录下。
+- 将该目录 mount 到 Pod 指定容器的挂载点下。
 
 
 ## CSI
 
-### 什么是 CSI
-
-### CSI 工作原理
-
-## 实践
+CSI 是为第三方存储提供数据卷实现的抽象接口。
 
 
+CSIDriver : 注册 CSI 插件
 
+Provisioner : 通过 csi sock 获取 csi driver 名称
 
+创建 PVC，指定存储大小及 StorageClass；
+
+PV Controller 为 PVC 打 annotation 说明使用的是 CSI 插件：
+
+    volume.beta.kubernetes.io/storage-provisioner: ru.yandex.s3.csi
+    volume.kubernetes.io/storage-provisioner: ru.yandex.s3.csi
+
+Provisioner 观察到  volume.beta.kubernetes.io/storage-provisioner: ru.yandex.s3.csi 是自己，获取 StorageClass 的参数，通过 sock 使用 grpc 调用 CSI 插件的 CreateVolume 方法。CreateVolume 成功，Provisioner 创建一个 PV
+
+PV Controller 绑定 PV 和 PVC
 
 
 
@@ -79,3 +93,5 @@ PV Controller、AD Controller、Volume Manager 主要是进行操作的调用，
 - [K8S官方文档：存储概念](https://kubernetes.io/docs/concepts/storage/)
 - [从零开始入门 K8s：Kubernetes 存储架构及插件使用](https://www.infoq.cn/article/afju539zmbpp45yy9txj)
 - https://jimmysong.io/book/kubernetes-handbook/storage/
+- [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md)
+- [CSI架构和原理](https://www.cnblogs.com/hgzero/p/17464313.html)
