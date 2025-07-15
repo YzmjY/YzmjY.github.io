@@ -53,41 +53,100 @@ PV Controller、AD Controller、Volume Manager 主要是进行操作的调用，
 ![](../assert/k8s_持久化卷创建过程.png)
 
 - 用户创建一个包含 PVC 的 Pod
-- PV Controller 观察到 UnBound 的 PVC， PV Controller 会去集群找一个合适的 PV，如果找不到，则调用 Volume Plugin 去做 Provision，之后创建一个 PV，将该 PV 与 PVC 绑定。
-- Scheduler 完成 Pod 的调度。
+- PV Controller 观察到 Pending 的 PVC， PV Controller 会去集群找一个合适的 PV，如果找不到，则调用 Volume Plugin 去做 Provision，之后创建一个 PV，将该 PV 与 PVC 绑定，为 PVC 打上 `"volume.kubernetes.io/selected-node"` 标签，供后续 Scheduler 使用。
+- Scheduler 调度 Pod 到对应节点。
 - AD Controller 调用 VolumePlugin 将 PV Attach 到节点上。
 - Volume Manager 将 PV mount 到 Pod 在节点上对应的一个子目录下。
 - 将该目录 mount 到 Pod 指定容器的挂载点下。
 
 
 ## CSI
-
 CSI 是为第三方存储提供数据卷实现的抽象接口。
 
+CSI 对象：
 
-CSIDriver : 注册 CSI 插件
+- CSINode：表示节点上的 CSI 插件信息，包括插件名称，node id，topologyKeys，CSI 不需要主动创建 CSINode 对象，当 CSI 通过 kubelet 注册时，kubelet 会自动创建 CSINode 对象。[node-driver-registrar](https://kubernetes-csi.github.io/docs/node-driver-registrar.html) 实现了注册 CSI 插件这一功能。
+    ```yaml
+      apiVersion: storage.k8s.io/v1
+    kind: CSINode
+    metadata:
+      name: node1
+    spec:
+      drivers:
+      - name: mycsidriver.example.com
+        nodeID: storageNodeID1
+        topologyKeys: ['mycsidriver.example.com/regions', "mycsidriver.example.com/zones"]
+    ```
+- CSIDriver：表示 CSI 插件的注册信息，用来自定义 Kubernets 的行为，例如 `attachRequired: false` 表示通过该 CSI 创建的 PV 可以跳过 Attach/Detach 操作。安装一个 CSI 插件时，必须要创建 CSIDriver 对象。
+    ```yaml
+    apiVersion: storage.k8s.io/v1
+    kind: CSIDriver
+    metadata:
+      name: mycsidriver.example.com
+    spec:
+      attachRequired: true
+      podInfoOnMount: true
+      fsGroupPolicy: File # added in Kubernetes 1.19, this field is GA as of Kubernetes 1.23
+      volumeLifecycleModes: # added in Kubernetes 1.16, this field is beta
+        - Persistent
+        - Ephemeral
+      tokenRequests: # added in Kubernetes 1.20. See status at https://kubernetes-csi.github.io/docs/token-requests.html#status
+        - audience: "gcp"
+        - audience: "" # empty string means defaulting to the `--api-audiences` of kube-apiserver
+          expirationSeconds: 3600
+      requiresRepublish: true # added in Kubernetes 1.20. See status at https://kubernetes-csi.github.io/docs/token-requests.html#status
+      seLinuxMount: true # Added in Kubernetest 1.25.
 
-Provisioner : 通过 csi sock 获取 csi driver 名称
+    ```
 
-创建 PVC，指定存储大小及 StorageClass；
+CSI 插件组件：
 
-PV Controller 为 PVC 打 annotation 说明使用的是 CSI 插件：
+- Node Plugin
+- Controller Plugin
 
-    volume.beta.kubernetes.io/storage-provisioner: ru.yandex.s3.csi
-    volume.kubernetes.io/storage-provisioner: ru.yandex.s3.csi
+需要实现三组 RPC：
 
-Provisioner 观察到  volume.beta.kubernetes.io/storage-provisioner: ru.yandex.s3.csi 是自己，获取 StorageClass 的参数，通过 sock 使用 grpc 调用 CSI 插件的 CreateVolume 方法。CreateVolume 成功，Provisioner 创建一个 PV
+- Identity Service
+- Controller Service
+- Node Service
 
-PV Controller 绑定 PV 和 PVC
+各个 RPC 被调用的时机及应该实现的功能见 [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md)
 
+Kubernetes CSI Sidecar 容器是一组标准容器，旨在简化 Kubernetes 上 CSI 驱动程序的开发和部署，相当于官方实现了一些通用的功能，不用 CSI 开发者重复开发，直接使用这些组件即可，CSI 开发者可以专注于存储本身的实现。包含多个 External Plugin 组件，每个组件和 CSI Plugin 组合的时候会完成某种功能，。
 
+- External Provisioner
+- External Attacher
+- External Resizer
+- External Snapshoter
 
+一个典型的 Volume 生命周期内 CSI 的 RPC 调用：
+```bash
+   CreateVolume +------------+ DeleteVolume
+ +------------->|  CREATED   +--------------+
+ |              +---+----^---+              |
+ |       Controller |    | Controller       v
++++         Publish |    | Unpublish       +++
+|X|          Volume |    | Volume          | |
++-+             +---v----+---+             +-+
+                | NODE_READY |
+                +---+----^---+
+               Node |    | Node
+              Stage |    | Unstage
+             Volume |    | Volume
+                +---v----+---+
+                |  VOL_READY |
+                +---+----^---+
+               Node |    | Node
+            Publish |    | Unpublish
+             Volume |    | Volume
+                +---v----+---+
+                | PUBLISHED  |
+                +------------+
 
-
-
-
-
-
+Figure 6: The lifecycle of a dynamically provisioned volume, from
+creation to destruction, when the Node Plugin advertises the
+STAGE_UNSTAGE_VOLUME capability.
+```
 
 ## 参考
 - [K8S官方文档：存储概念](https://kubernetes.io/docs/concepts/storage/)
@@ -95,3 +154,4 @@ PV Controller 绑定 PV 和 PVC
 - https://jimmysong.io/book/kubernetes-handbook/storage/
 - [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md)
 - [CSI架构和原理](https://www.cnblogs.com/hgzero/p/17464313.html)
+- [云计算K8s组件系列—- 存储CSI](https://kingjcy.github.io/post/cloud/paas/base/kubernetes/k8s-store-csi/)
