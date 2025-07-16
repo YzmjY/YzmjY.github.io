@@ -59,13 +59,23 @@ PV Controller、AD Controller、Volume Manager 主要是进行操作的调用，
 - Volume Manager 将 PV mount 到 Pod 在节点上对应的一个子目录下。
 - 将该目录 mount 到 Pod 指定容器的挂载点下。
 
+Volume Plugin 分为 in-tree 和 out-tree 两种：
+
+- In-Tree 表示源码是放在 Kubernetes 内部的，和 Kubernetes 一起发布、管理与迭代，缺点及时迭代速度慢、灵活性差；
+
+- Out-of-Tree 类的 Volume Plugins 的代码独立于 Kubernetes，它是由存储商提供实现的，目前主要有 Flexvolume 和 CSI 两种实现机制，可以根据存储类型实现不同的存储插件。
+
+![](../assert/storage-plugins.png)
 
 ## CSI
+
 CSI 是为第三方存储提供数据卷实现的抽象接口。
 
-CSI 对象：
+![](../assert/csi.png)
 
-- CSINode：表示节点上的 CSI 插件信息，包括插件名称，node id，topologyKeys，CSI 不需要主动创建 CSINode 对象，当 CSI 通过 kubelet 注册时，kubelet 会自动创建 CSINode 对象。[node-driver-registrar](https://kubernetes-csi.github.io/docs/node-driver-registrar.html) 实现了注册 CSI 插件这一功能。
+### CSI 对象
+
+- CSINode：表示节点上的 CSI 插件信息，包括插件名称，node id，topologyKeys（表达卷与节点之间的拓扑亲和性），CSI 不需要主动创建 CSINode 对象，当 CSI 通过 kubelet 注册时，kubelet 会自动创建 CSINode 对象。[node-driver-registrar](https://kubernetes-csi.github.io/docs/node-driver-registrar.html) 实现了注册 CSI 插件这一功能。
     ```yaml
       apiVersion: storage.k8s.io/v1
     kind: CSINode
@@ -77,6 +87,7 @@ CSI 对象：
         nodeID: storageNodeID1
         topologyKeys: ['mycsidriver.example.com/regions', "mycsidriver.example.com/zones"]
     ```
+
 - CSIDriver：表示 CSI 插件的注册信息，用来自定义 Kubernets 的行为，例如 `attachRequired: false` 表示通过该 CSI 创建的 PV 可以跳过 Attach/Detach 操作。安装一个 CSI 插件时，必须要创建 CSIDriver 对象。
     ```yaml
     apiVersion: storage.k8s.io/v1
@@ -99,25 +110,35 @@ CSI 对象：
 
     ```
 
-CSI 插件组件：
+### CSI 插件组件
 
-- Node Plugin
-- Controller Plugin
+- Node Plugin：主要包含 Kubelet 组件，包括 VolumeManager 和 VolumePlugin，它们会去调用 CSI Plugin 去做 mount 和 unmount 操作；另外一个组件 Driver Registrar 主要实现的是 CSI Plugin 注册的功能。
 
-需要实现三组 RPC：
+- Controller Plugin：与外部组件合作，处理 PV 的创建、删除、绑定、解绑等操作。
+
+此外，还包含多个 External Plugin 组件，相当于官方实现了一些通用的功能，不用 CSI 开发者重复开发，直接使用这些组件即可，CSI 开发者可以专注于存储本身的实现。，每个组件和 CSI Plugin 组合的时候会完成某种功能。
+
+- External Provisioner
+- External Attacher
+- External Resizer
+- External Snapshoter
+- Node-Driver-Registrar
+
+|||
+|--|--|
+|External Provisioner + Controller Server |创建、删除 PV|
+|External Attacher + Node Server |绑定、解绑 PV|
+|External Resizer + Controller Server |调整 PV 大小|
+|External Snapshoter + Controller Server |创建、删除 Snapshot|
+|Node-Driver-Registrar + Node Server |注册 CSI 插件|
+
+一个外部 CSI 插件需要实现一下三组 RPC：
 
 - Identity Service
 - Controller Service
 - Node Service
 
 各个 RPC 被调用的时机及应该实现的功能见 [CSI Spec](https://github.com/container-storage-interface/spec/blob/master/spec.md)
-
-Kubernetes CSI Sidecar 容器是一组标准容器，旨在简化 Kubernetes 上 CSI 驱动程序的开发和部署，相当于官方实现了一些通用的功能，不用 CSI 开发者重复开发，直接使用这些组件即可，CSI 开发者可以专注于存储本身的实现。包含多个 External Plugin 组件，每个组件和 CSI Plugin 组合的时候会完成某种功能，。
-
-- External Provisioner
-- External Attacher
-- External Resizer
-- External Snapshoter
 
 一个典型的 Volume 生命周期内 CSI 的 RPC 调用：
 ```bash
@@ -147,6 +168,10 @@ Figure 6: The lifecycle of a dynamically provisioned volume, from
 creation to destruction, when the Node Plugin advertises the
 STAGE_UNSTAGE_VOLUME capability.
 ```
+
+### CSI 注册过程
+
+![](../assert/csi-registrar.png)
 
 ## 参考
 - [K8S官方文档：存储概念](https://kubernetes.io/docs/concepts/storage/)
