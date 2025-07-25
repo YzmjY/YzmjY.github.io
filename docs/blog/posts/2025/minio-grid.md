@@ -1,11 +1,11 @@
 ---
-date: 2025-06-04
+date: 2025-07-25
 categories:
   - MinIO
 draft: false
 ---
 
-# MinIO: 通信框架-Grid
+# MinIO 笔记（4）: 通信框架-Grid
 
 ![](../assert/minio.png)
 
@@ -78,6 +78,7 @@ type Manager struct {
 }
 ```
 其中：
+
 - ID：`Manager` 的实例 ID，每次服务器重启时都会改变。
 - targets：存储所有连接到 Grid 的连接,key 为连接的目标地址，在 `Manager` 创建时传入，不可更改。
 
@@ -99,8 +100,18 @@ func (c *Connection) shouldConnect() bool {
 每一对节点之间建立的连接对应一个 `Connection` 实例，`Connection` 用来收发连接上的消息，管理连接上的多路复用.
 
 #### 连接建立
-待建连的两个节点之间首先依据上述的hash算法确定建连的方向，由 client 端发起建连，server 端响应建连。
-
+待建连的两个节点之间首先依据上述的 hash 算法确定建连的方向，由 client 端发起建连，server 端响应建连。
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+    Client->>Server: 建立 WebSocket 连接
+    Server-->>Client: 响应
+	Client->>Server: 发送 OpConnect 请求
+	Server-->>Client: 响应 OpConnectResponse 
+	Client->Client: handleMsg 阻塞，处理消息 
+	Server->Server: handleMsg 阻塞，处理消息
+```
 ##### Client侧
 Client 侧会不断地尝试重新建立连接，直至服务关闭即 `Connection` 实例的状态被设置为 Shutdown（正常情况下不会有这个状态）。
 
@@ -135,6 +146,7 @@ Server 侧则开放一个 HTTP API 端点，用于接收 Client 端的连接请�
 
 #### 消息收发
 Server 侧通过接收 Client 端的连接请求，创建 `Connection` 实例;Client 端主动发起连接请求，创建 `Connection` 实例。`Connection` 建立完成后，会启动两个协程，分别用于接收和发送消息。
+
 - `readStream`：负责从 websocket 连接中读取消息，然后将消息解码为 `message` 私有协议格式，而后根据 `OpCode` 进行路由，区分出不同的操作类型。
 - `writeStream`：负责将 buf 合并写入 websocket 连接中，并发送探活消息。
 
@@ -209,7 +221,30 @@ const (
 - 注册该 Handler，关联一个 HandlerID。
 - 通过 Handler 的 `Call` 方法，实现 RPC 调用。
 
+通过注册的 Handler 客户端调用的流程如下：
+```mermaid
+sequenceDiagram
+    participant Stub
+    participant muxClient
+    participant ClientConnection
+    participant ServerConnection
+    participant muxServer
+
+	Stub->>Stub: 组装 Payload
+	Stub->>muxClient: 调用 Request 方法，创建 muxClient 实例
+	muxClient->>ClientConnection: 组装消息，调用 send
+	ClientConnection-->ServerConnection: 发送 OpRequest 请求
+	ServerConnection-->>muxServer: 接收 OpRequest 请求
+	muxServer->>muxServer: 调用 Handler 处理请求
+	muxServer-->>ServerConnection: 发送 OpResponse 响应
+	ServerConnection-->>ClientConnection: 接收 OpResponse 响应
+	ClientConnection-->>muxClient: 分发 OpResponse 响应
+	muxClient-->>Stub: 返回响应结果
+```
+
+
 流式请求类似，流程如下：
+
 - 实现 Handler：`StreamHandlerFn func(ctx context.Context, payload []byte, in <-chan []byte, out chan<- []byte) *RemoteErr`
 - 注册该 Handler，关联一个 HandlerID。 
 - 通过 Handler 的 `Call` 方法，实现 RPC 调用，返回一个 `Stream` 实例。
@@ -217,7 +252,9 @@ const (
   - 通过 `Stream` 的 `Send` 方法，发送请求。
 
 ### 健康检查
-每个 Connection 都会定期的进行 Ping\Pong 的请求来进行探活，对于超时未收到 Pong 响应的连接，会由 Client 侧不断地发起 `reconnect` 请求。	
+每个 Connection 都会定期（默认为 10s）的互相进行 Ping\Pong 的请求来进行探活，对于超时未收到 Pong 响应的连接，会由 Client 侧不断地发起 `reconnect` 请求。	
+
+在 Stream 场景下，mux 实例也会互相进行探活。
 
 ## MinIO 中的使用
 MinIO中一个Server会有两个全局的 `Manager` 实例，分别用于处理分布式锁场景和其他交互场景。

@@ -1,29 +1,29 @@
 ---
-date: 2025-06-16
+date: 2025-07-23
 categories:
   - MinIO
 draft: false
 ---
 
-# MinIO: 本地文件组织
+# MinIO 笔记（2）: 本地文件组织
 
 ![](../assert/minio.png)
 
 <!-- more -->
 
-根据MinIO文档，MinIO对存储的要求如下：
+根据 MinIO 文档，MinIO 对存储的要求如下：
 
-- 使用本地存储而不是NAS等网络存储。
-- 使用XFS文件系统格式化磁盘。MinIO在开发和测试时使用的是XFS，因此使用XFS可以更好的保证可用性。
+- 使用本地存储而不是 NAS 等网络存储。
+- 使用 XFS 文件系统格式化磁盘。MinIO 在开发和测试时使用的是 XFS，因此使用 XFS 文件系统可以更好的保证可用性。
 - 重启之后保证磁盘的挂载和映射一致。
 
-MinIO采用本地文件系统组织数据，并且推荐使用XFS。MinIO要求独占单个驱动或存储卷，其他进程不应该访问该卷，否则会导致数据被损坏。
+MinIO 采用本地文件系统组织数据，并且推荐使用 XFS 文件系统。MinIO 要求独占单个驱动或存储卷，其他进程不应该访问该卷，否则会导致数据被损坏。
 
 
-## Object管理
-MinIO作为一个对象存储系统，使用扁平化的Bucket来组织Object数据。一个Bucket在文件系统中表现为位于顶层目录的一个子目录，Bucket下可以承载任意数量的Object。
+## Object 管理
+MinIO 作为一个对象存储系统，使用扁平化的 Bucket 来组织 Object 数据。一个 Bucket 在文件系统中表现为位于顶层目录的一个子目录，Bucket 下可以承载任意数量的 Object。
 
-例如，一个MinIO的存储卷下可能有如下结构的文件系统：
+例如，一个 MinIO 的存储驱动下可能有如下结构的文件系统：
 ```
 / #root
 /images/
@@ -42,22 +42,39 @@ MinIO作为一个对象存储系统，使用扁平化的Bucket来组织Object数
       2020-01-04-MinIO-Interview.md
 ```
 
-在上述例子中，`/images/`、`/videos/`和`/articles/`都是Bucket，而Bucket下的文件则是Object。此外，上述结构有另一个特点，即有些Object存在类似文件系统中的层级关系，而在对象存储中，Object应该是扁平的，通过ObjectName区分，这种层级关系在MinIO中被视为一个Object的前缀，用户在上传一个Object时（以/articles/john.doe/ 2020-01-02-MinIO-Object-Storage.md为例），MinIO会自动处理/articles/john.doe/这些前缀，通过文件系统的层级关系来管理不同前缀的Object。
+在上述例子中，`/images/`、`/videos/`和`/articles/`都是 Bucket，而 Bucket 下的文件则是 Object 的数据，这些数据经过了 MinIO 的编码。此外，上述结构有另一个特点，我们知道对象存储的 Object 本没有目录层级的概念，而是扁平化的存在于 Bucket 中，通过 ObjectName 区分，但上述有些 Object 存在类似文件系统中的层级关系，这种层级关系是 MinIO 处理带有 `/` 的 Object 名称的方式，Object 名称被`/`切分，每一部分被视为一个前缀，属于对象名称的一部分。用户在上传一个 Object 时（以`/articles/john.doe/ 2020-01-02-MinIO-Object-Storage.md`为例），MinIO 会自动处理`/articles/john.doe/` 这些前缀，通过文件系统的层级关系来管理不同前缀的 Object。
 
+在 Object 目录下，存在数据目录、元数据文件，数据目录下是经过 MinIO 编码后的文件，元数据文件是 MinIO 内部使用的文件，用于存储 Object 的元数据信息。
+```bash
+2020-01-04-MinIO-Interview.md/
+	data-dir/
+		part.1
+		part.2
+	xl.meta
+```
+
+
+如此处理决定了 MinIO 的一个特点，即不能存在如下：
+```bash
+prefix/object1
+prefix/object1/object2
+```
+上述 object2 以 object1 为前缀，这在 MinIO 中是不允许的。
 
 ## 系统保留桶
-MinIO在启动时会自动创建一个`.minio.sys`桶，该桶为系统保留使用，存储一些系统元数据、配置信息以及临时对象。元数据桶下包含如下内容：
-- `buckets`: 存放与Bucket的一些元数据，包括：Bucket用量、Scanner扫描、数据修复等相关信息。
-- `config`: 存放系统配置、IAM配置。
-- `format.json`: 一个JSON格式的文件，保存磁盘格式化信息，MinIO依据该文件判断磁盘是否格式化。
+MinIO 在启动时会自动创建一个`.minio.sys`桶，该桶为系统保留使用，存储一些系统元数据、配置信息以及临时对象。元数据桶下包含如下内容：
+
+- `buckets`: 存放与 Bucket 的一些元数据，包括：Bucket 用量、Scanner 扫描、数据修复等相关信息。
+- `config`: 存放系统配置、IAM 配置。
+- `format.json`: 一个 JSON 格式的文件，保存磁盘格式化信息，MinIO 依据该文件判断磁盘是否格式化。
 - `multipart`: 存放分片上传过程中的中间文件。
 - `pool.bin`: 存放存储池相关的元数据。
 - `tmp`: 存放临时文件。
 
-与用户Bucket一样，`.minio.sys`桶下的这些目录下的Object也是以EC的方式被编码到各个节点上进行存储（format.json除外，该文件是每个磁盘各自的，保存disk_id及格式化信息）。
+与用户Bucket一样，`.minio.sys`桶下的这些目录下的 Object 也是以 EC 的方式被编码到各个节点上进行存储（format.json 除外，该文件是每个磁盘各自的，保存 disk_id 及格式化信息）。
 
-### `Buckets`
-`Buckets`目录下有如下Object：
+### Buckets
+`Buckets`目录下有如下 Object：
 ```
 .
 ├── .background-heal.json
@@ -80,7 +97,7 @@ MinIO在启动时会自动创建一个`.minio.sys`桶，该桶为系统保留使
     └── xl.met
 ```
 
-`.background-heal.json` 存放Scanner运行过程中的Scan模式，依据Cycle信息决定是否采用修复bitrot：
+`.background-heal.json` 存放 Scanner 运行过程中的 Scan 模式，依据 Cycle 信息决定是否采用修复 bitrot：
 
 ```go
 type backgroundHealInfo struct {
@@ -90,7 +107,7 @@ type backgroundHealInfo struct {
 }
 ```
 
-`.bloomcycle.bin` 存放Scanner的周期信息，包括当前周期、下一个周期、扫描开始时间、周期完成时间等。(该名称是历史原因，当前已经没有使用布隆过滤器了)。
+`.bloomcycle.bin` 存放 Scanner 的周期信息，包括当前周期、下一个周期、扫描开始时间、周期完成时间等。(该名称是历史原因，当前已经没有使用布隆过滤器了)。
 
 ```go
 type currentScannerCycle struct {
@@ -101,7 +118,7 @@ type currentScannerCycle struct {
 }
 ```
 
-`.healing.bin` 对应healingTracker，用来持久化一次新磁盘格式化和数据恢复过程中的相关信息：
+`.healing.bin` 对应 `healingTracker`，用来持久化一次新磁盘格式化和数据恢复过程中的相关信息：
 ```go
 type healingTracker struct {
         disk StorageAPI    `msg:"-"`
@@ -159,7 +176,7 @@ type healingTracker struct {
 }
 ```
 
-`.usage-cache.bin` 缓存Scanner过程中搜集的用量信息，一些情况下直接使用缓存中的信息，而不是重新计算。
+`.usage-cache.bin` 缓存 Scanner 过程中搜集的用量信息，一些情况下直接使用缓存中的信息，而不是重新计算。
 
 
 `.usage.json` 存放总的用量信息，内容如下：
@@ -202,7 +219,7 @@ type DataUsageInfo struct {
 }
 ```
 
-除上述Object外，针对每一个单独的Bucket，Buckets目录下都用一个与Bucket同名的目录，用来存放Bucket的相关信息。例如上述的：
+除上述 Object 外，针对每一个单独的 Bucket，Buckets 目录下都用一个与 Bucket 同名的目录，用来存放 Bucket 的相关信息。例如上述的：
 ```go
 ├── data
 │   ├── .metadata.bin
@@ -214,7 +231,7 @@ type DataUsageInfo struct {
 ```
 `.usage-cache.bin`与上层目录中的作用一致。
 
-`.metadata.bin` 存放该Bucket的元信息：
+`.metadata.bin` 存放该 Bucket 的元信息：
 ```go
 // BucketMetadata contains bucket metadata.
 // When adding/removing fields, regenerate the marshal code using the go generate above.
@@ -265,10 +282,10 @@ type BucketMetadata struct {
 }
 ```
 
-### `config`
+### config
 
-### `format.json`
-存储磁盘的格式化信息，包括ID、版本、格式以及纠删集配置、磁盘信息。
+### format.json
+存储磁盘的格式化信息，包括 ID、版本、格式以及纠删集配置、磁盘信息。
 ```go
 // formatErasureV3 struct is same as formatErasureV2 struct except that formatErasureV3.Erasure.Version is "3" indicating
 // the simplified multipart backend which is a flat hierarchy now.
@@ -343,7 +360,7 @@ type DiskInfo struct {
 
 ```
 
-### `multipart`
+### multipart
 该目录下用来保存分片上传时的中间文件。分片上传的过程中，在该目录下会存在类似如下结构的中间目录：
 
 ```
@@ -360,13 +377,13 @@ type DiskInfo struct {
 
 分片上传的一般步骤为：
 
-- `NewMultipartUpload`：初始化分片上传，该调用会在`multipart`目录下生成上传的Object对应的xl.meta文件，路径为：SHA256(bucket/object)/uploadID/xl.meta
+- `NewMultipartUpload`：初始化分片上传，该调用会在`multipart`目录下生成上传的 Object 对应的 xl.meta 文件，路径为：SHA256(bucket/object)/uploadID/xl.meta
 - `UploadPart`：上传分片，该调用会在`multipart`目录下生成分片对应的文件，路径为：SHA256(bucket/object)/uploadID/part.N(part.N.meta)
 - `CompleteMultipartUpload`：完成分片上传，该调用会将`multipart`目录下的文件rename到对应的用户Bucket下。
 
-按照MinIO的设计，在分片上传过程中如果发生中断，导致没有调用`CompleteMultipartUpload`，那么此时产生的中间文件不会立马被删除，也不会一直残留，碎片文件会在24小时后自动删除。
+按照 MinIO 的设计，在分片上传过程中如果发生中断，导致没有调用`CompleteMultipartUpload`，那么此时产生的中间文件不会立马被删除，也不会一直残留，碎片文件会在24小时后（默认设置）自动删除。
 
-### `pool.bin`
+### pool.bin
 保存存储池的相关元数据。
 
 ```go
@@ -415,17 +432,15 @@ type PoolDecommissionInfo struct {
 }
 ```
 
-### `tmp`
-各种临时文件，例如上述分片上传过程，在上传一个part时，也会先写入该目录，完成后再rename到multipart目录下。
+### tmp
+各种临时文件，例如上述分片上传过程，在上传一个part时，也会先写入该目录，完成后再`rename`到 multipart 目录下。
 
-也包括系统`.trash`目录，临时删除文件，该目录定时被清理（周期为最大25ms）。
+也包括系统`.trash`目录，临时删除文件，该目录定时被清理（周期为最大 25ms）。
 
 ## 用户定义桶
 
-即用户显式创建的存储桶，每个桶内可以上传任意数量的Object，Object的名称可以有类似文件的层级结构，一个典型的用户Bucket结构如下：
-
-对于数据量小于128K的Object，数据会直接内联到xl.meta文件中，而不会创建一个数据目录，否则将会创建一个具有uuid的数据目录，用part.N的文件来存储数据。
-
+即用户显式创建的存储桶，每个桶内可以上传任意数量的 Object，Object 的名称可以有类似文件的层级结构,对于数据量小于128K的Object，数据会直接内联到 xl.meta 文件中，而不会创建一个数据目录，否则将会创建一个具有 uuid 的数据目录，用 part.N 的文件来存储数据。
+一个典型的用户 Bucket 结构如下：
 ```
 .
 ├── build.sh

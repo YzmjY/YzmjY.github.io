@@ -1,17 +1,17 @@
 ---
-date: 2025-06-23
+date: 2025-07-24
 categories:
   - MinIO
 draft: false
 ---
 
-# MinIO: 元数据组织
+# MinIO 笔记（3）: 元数据组织
 
 ![](../assert/minio.png)
 
 <!-- more -->
 
-## Object元数据
+## Object 元数据
 MinIO 的元数据对应 xl.meta 文件，该文件记录了一个 Object 的所有元数据条目，包括多版本、删除标记等。
 
 xl.meta 文件对应的数据结构如下：
@@ -41,6 +41,7 @@ type xlMetaV2ShallowVersion struct {
 	meta   []byte // meta数据buf
 }
 ```
+
 其中 `header` 包括完整的元数据的概要信息，包括如下字段：	
 ```go
 type xlMetaV2VersionHeader struct {
@@ -52,7 +53,6 @@ type xlMetaV2VersionHeader struct {
 	EcN, EcM  uint8 // Note that these will be 0/0 for non-v2 objects and older xl.meta
 }
 ``` 
-
 - `VersionID`: 多版本中的版本 ID，每个 Version 不同。
 - `ModTime`: 修改时间。
 - `Signature`: 根据 `xlMetaV1Object` 计算出的一个签名，一个 Object 的某一 Version 的签名在所有磁盘上一致。
@@ -133,7 +133,7 @@ type xlMetaV2Object struct {
 - "transitioned-versionID"：该版本的分层对象在远端对象对应的 VersionID。
 - "transition-tier"：分层存储的远端存储类。
 - "crc": 上传时计算的 CRC32C 校验和。	
-- "metacache-part-%d": List过程中产生的 metacache 数据块。	
+- "metacache-part-%d": List 过程中产生的 metacache 数据块。	
 - "inline-data": 标识是否内联数据。
 
 // TODO: 
@@ -147,7 +147,7 @@ type xlMetaV2Object struct {
 - "objectlock-legalhold-timestamp"
 - 
 
-### xl.meta 落盘流程
+### xl.meta 构造及落盘
 
 对应 `xlStorage` 的 `WriteMetadata` 方法。函数签名为：	
 
@@ -159,53 +159,53 @@ func (s *xlStorage) WriteMetadata(ctx context.Context, origvolume, volume, path 
 - `volume`/`path`: 标识磁盘位置。
 - `fi`: 待写入的元数据。
 
-根据上文对于元数据数据结构的分析，可见多个版本对应同一个 xl.meta 文件，xl.meta 内部通过一个数据区分不同的 version。xl.meta 文件的完整写入流程如下：
+根据上文对于元数据数据结构的分析，可见多个版本对应同一个 xl.meta 文件，xl.meta 内部通过一个数组区分不同的 version。xl.meta 文件的完整写入流程如下：
 
 #### 构造 `xlMetaV2`
 完成 `FileInfo` 到 `xlMetaV2Version` 的数据转换，判断是对已有 version 的修改还是新增 version，新增 version 插入 `xlMetaV2.versions` 的前端。
 
 #### 编码
-编码xlMetaV2，具体编码格式如下：
+编码 xlMetaV2，具体编码格式如下：
 
 ```
-+--------------------------------------------------------------------+
-|                     xlHeader (magic,"XL2  ")                       |
-+--------------------------------------------------------------------+
-|                  xlVersionCurrent(xl version)                      |
-+--------------------------------------------------------------------+
-|          Metadata Block Size (4字节, 后续元数据块的总长度)             |
-+--------------------------------------------------------------------+
-|                                                                    |
-|                            Metadata Block                          |
-|                                                                    |
-| +----------------------------------------------------------------+ |
-| |                        xlHeaderVersion (3)                     | |
-| +----------------------------------------------------------------+ |
-| |                         xlMetaVersion (3)                      | |
-| +----------------------------------------------------------------+ |
-| |                        Number of Versions                      | |
-| +----------------------------------------------------------------+ |
-| |                 Version 1 Header (MessagePack)                 | |
-| +----------------------------------------------------------------+ |
-| |                 Version 1 Meta (MessagePack)                   | |
-| +----------------------------------------------------------------+ |
-| |                           ...                                  | |
-| +----------------------------------------------------------------+ |
-| |                         Version N Header                       | |
-| +----------------------------------------------------------------+ |
-| |                          Version N Meta                        | |
-| +----------------------------------------------------------------+ |
-|                                                                    |
-+--------------------------------------------------------------------+
-|                          CRC Checksum (5Byte)                      |
-+--------------------------------------------------------------------+
-|                             Inline Data                            |
-+--------------------------------------------------------------------+
+			+--------------------------------------------------------------------+
+			|                     xlHeader (magic,"XL2  ")                       |
+			+--------------------------------------------------------------------+
+			|                  xlVersionCurrent(xl version)                      |
+			+--------------------------------------------------------------------+
+			|          Metadata Block Size (4字节, 后续元数据块的总长度)             |
+			+--------------------------------------------------------------------+
+			|                                                                    |
+			|                            Metadata Block                          |
+			|                                                                    |
+			| +----------------------------------------------------------------+ |
+			| |                        xlHeaderVersion (3)                     | |
+			| +----------------------------------------------------------------+ |
+			| |                         xlMetaVersion (3)                      | |
+			| +----------------------------------------------------------------+ |
+			| |                        Number of Versions                      | |
+			| +----------------------------------------------------------------+ |
+			| |                 Version 1 Header (MessagePack)                 | |
+			| +----------------------------------------------------------------+ |
+			| |                 Version 1 Meta (MessagePack)                   | |
+			| +----------------------------------------------------------------+ |
+			| |                           ...                                  | |
+			| +----------------------------------------------------------------+ |
+			| |                         Version N Header                       | |
+			| +----------------------------------------------------------------+ |
+			| |                          Version N Meta                        | |
+			| +----------------------------------------------------------------+ |
+			|                                                                    |
+			+--------------------------------------------------------------------+
+			|                          CRC Checksum (5Byte)                      |
+			+--------------------------------------------------------------------+
+			|                             Inline Data                            |
+			+--------------------------------------------------------------------+
 ```
 #### 落盘
 写磁盘，对于临时创建的对象（例如在 `listObjects()` 调用期间创建的对象），可以不用使用 sync 落盘，其余的写入都是 sync 的。
 
-## Bucket元数据
+## Bucket 元数据
 每个 Bucket 的元数据对应一个在系统保留 Bucket(`.minio.sys`) 下的一个 Object，具体名称为：`buckets/<bucketname>/.metadata.bin`。该文件记录了一个 Bucket 所有的元数据信息（不包括使用量等统计信息），对应的数据结构为：
 
 ```go
@@ -246,14 +246,20 @@ type BucketMetadata struct {
 
 ### Bucket 元数据管理
 Bucket 元数据的管理对应 `BucketMetadataSys` 子模块，该模块在内存中缓存了一个 MinIO 集群所有 Bucket 的元数据，提供了 BucketMeta 的读写接口。
+```go
+type BucketMetadataSys struct {
+	objAPI ObjectLayer
 
+	sync.RWMutex
+	initialized bool
+	group       *singleflight.Group
+	metadataMap map[string]BucketMetadata 
+}
+```
+其中 `metadataMap` 字段缓存了所有 Bucket 的元数据，key 为 Bucket 名称，value 为 Bucket 元数据。
 
-
-
-
-
-
-
-
-
-
+该子模块有一个全局实例：
+```go
+globalBucketMetadataSys *BucketMetadataSys
+```
+该实例在服务启动时创建，系统启动时首先获取全部的 Bucket，然后再由 `BucketMetadataSys` 去将 Bucket 元数据加载到内存中。初始加载完成后，还会启动一个定时任务去刷新 Bucket 的元数据。
