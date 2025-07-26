@@ -13,10 +13,12 @@ draft: false
 
 ## Dsync
 
-「Dsync」是 MinIO 中的用于实现分布式锁的组件。当一个 Node 需要加锁时，向所有 Node 发出请求，在收到 n/2 + 1 个同意后（对于读锁 n/2），才能成功获取锁。
+「Dsync」是 MinIO 中的用于实现分布式锁的组件。当一个 Node 需要加锁时，它会向所有 Node（包括自己）发出加锁请求，只有在收到至少 n/2 + 1 个同意的响应之后（对于读锁 n/2），才能成功获取锁。
 
 ### 实现
-Dsync 组件的主要负责协调多个 Node 之间的锁请求，至于对于单个 Node 的锁请求，是通过 NetLocker 接口实现的。
+Dsync 组件负责协调多个 Node 之间的锁请求，而 Node 之间的加解锁通信，是通过 NetLocker 接口实现的。
+
+Dsync 的数据结构如下：
 ```go
 // Dsync represents dsync client object which is initialized with
 // authenticated clients, used to initiate lock REST calls.
@@ -28,7 +30,7 @@ type Dsync struct {
 	Timeouts Timeouts
 }
 ```
-`GetLockers` 方法返回 NetLocker 实例列表，用于与所有 Node 进行通信。
+`GetLockers` 方法返回 NetLocker 实例列表，用于与所有 Node 进行加解锁通信。
 
 NetLocker 接口定义了分布式锁的基本操作，包括加锁、解锁、刷新锁等。
 ```go
@@ -80,7 +82,7 @@ type NetLocker interface {
 }
 ```
 
-Dsync 在 NetLocker 之间传输如下信息，包括加锁的对象、锁的持有者、需要的 quorum 节点数等。
+NetLocker 通过 RPC 调用，向其他节点发送加锁、解锁、刷新等请求。请求的结构体如下，包括加锁的对象、锁的持有者、需要的 quorum 节点数等。
 ```go
 type LockArgs struct {
 	// Unique ID of lock/unlock request.
@@ -111,28 +113,37 @@ type LockArgs struct {
     * 否则，调用回调函数，强制释放已持有的锁
 - 未获取则重试至超时
 
+
 ```mermaid
 flowchart TD
-    Start([GetLocker])
-    Start --> Read{读锁？}
-    Read -- 是 --> SetR(isReadLock=true)
-    Read -- 否 --> SetW(isReadLock=false)
-    SetR --> lockBlocking(lockBlocking)
-    SetW --> lockBlocking(lockBlocking)
-    lockBlocking --> quorum(确定 quorum)
-    quorum --> lock(向所有节点发出加锁请求)
-    lock --> quorumResponse{是否获得 quorum 响应？}
-    lock -- 是否超时 --> timeout([加锁失败])
-    quorumResponse -- 是 --> success(加锁成功)
-    quorumResponse -- 否 --> release(释放已持有的锁)
-    release -- sleep,retry --> lock
-    success --> startContinuousLockRefresh(异步任务刷新)
-    startContinuousLockRefresh --> refresh(向所有节点发送 Refresh 请求)
-    refresh --> quorumResponse2{是否获得 quorum 响应？}
-    quorumResponse2 -- 是 --> success(刷新成功)
-    quorumResponse2 -- 否 --> cb(调用回调函数)
-    cb --> forceUnlock(强制释放已持有的锁)
-    startContinuousLockRefresh --> return([返回加锁成功])
+  subgraph GetLock/GetRLock
+    direction TB
+        Start([GetLocker])
+        Start --> Read{读锁？}
+        Read -- 是 --> SetR(isReadLock=true)
+        Read -- 否 --> SetW(isReadLock=false)
+    subgraph LockBlocking
+        direction TB
+            SetR --> quorum(确定 quorum)
+            SetW --> quorum(确定 quorum)
+            quorum --> lock(向所有节点发出加锁请求)
+            lock --> quorumResponse{是否获得 quorum 响应？}
+            lock -- 超时 --> timeout([加锁失败])
+            quorumResponse -- 是 --> success(加锁成功)
+            quorumResponse -- 否 --> release(释放已持有的锁)
+            release -- sleep,retry --> lock
+            success --> return([返回加锁成功]) 
+    end
+  end
+  subgraph RefreshLock
+    direction TB
+        success --异步启动一个协程--> startContinuousLockRefresh(异步任务刷新)
+        startContinuousLockRefresh --> refresh(向所有节点发送 Refresh 请求)
+        refresh --> quorumResponse2{是否获得 quorum 响应？}
+        quorumResponse2 -- 是 --> startContinuousLockRefresh
+        quorumResponse2 -- 否 --> cb(调用回调函数)
+        cb --> forceUnlock(强制释放已持有的锁)
+  end
 ```
 
 ### 释放锁
@@ -143,11 +154,11 @@ flowchart TD
 - 失败则退避重试，直至成功或超时
 
 ## NetLocker 实现
-上述 Dsync 负责在多个 Node 之间协调锁请求，而 NetLocker 则负责在单个 Node 上实现锁的加锁、解锁、刷新等操作。
+上述的 Dsync 组件负责在多个 Node 之间协调锁请求；对 Node 的加锁、解锁、刷新等操作由 NetLocker 实现。
 
-由于 Node 间锁的协调是通过网络的，则 NetLocker 需要一组服务端和客户端的实现，来满足 Node 之间的调用。NetLocker 的网络通信采用之前的 Grid 框架，将 NetLocker 的服务接口注册到 Grid 的 Handler 中。
+NetLocker 采用之前的 Grid 通信框架，将 NetLocker 的服务接口注册到 Grid 的 Handler 中，以实现节点间的 RPC 调用。
 
-其对锁的操作接口由`localLocker`实现，`localLocker` 负责在本地 Node 上维护锁的状态，对外部 Node 的加锁请求进行处理。
+NetLocker 的一个实现是 `localLocker` 实现，`localLocker` 接受 Node 间的加解锁请求，在本地 Node 上维护锁的状态。
 
 ## 不同的锁实现
 
