@@ -2,6 +2,7 @@
 date: 2025-07-25
 categories:
   - MinIO
+slug: minio-grid
 draft: false
 ---
 

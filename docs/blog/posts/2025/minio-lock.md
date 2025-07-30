@@ -2,6 +2,7 @@
 date: 2025-07-26
 categories:
   - MinIO
+slug: minio-lock
 draft: false
 ---
 
@@ -158,11 +159,69 @@ flowchart TD
 
 NetLocker 采用之前的 Grid 通信框架，将 NetLocker 的服务接口注册到 Grid 的 Handler 中，以实现节点间的 RPC 调用。
 
-NetLocker 的一个实现是 `localLocker` 实现，`localLocker` 接受 Node 间的加解锁请求，在本地 Node 上维护锁的状态。
+NetLocker 的一个实现是 `localLocker` 实现，`localLocker` 接受 Node 间的加解锁请求，在本地 Node 上维护锁的状态。`localLocker` 的定义如下：
+```go 
+// localLocker implements Dsync.NetLocker
+//
+//msgp:ignore localLocker
+type localLocker struct {
+	mutex     sync.Mutex
+	waitMutex atomic.Int32
+	lockMap   map[string][]lockRequesterInfo
+	lockUID   map[string]string // UUID -> resource map.
+
+	// the following are updated on every cleanup defined in lockValidityDuration
+	readers         atomic.Int32
+	writers         atomic.Int32
+	lastCleanup     atomic.Pointer[time.Time]
+	locksOverloaded atomic.Int64
+}
+```
+
+- `lockMap` 维护了锁的状态，键为锁的资源，值为锁的持有者列表（写锁只有一个，读锁可以有多个）。
+- `lockUID` 维护了锁的 UUID 到资源的映射，键为锁的 UUID，值为锁的资源。
+
+可见，`localLocker` 通过在内存中维护两个 map 来实现锁的状态管理。
 
 ## 不同的锁实现
 
 在 MinIO 中，通过上述的 Dsync 分布式锁机制，实现了两种类型的锁：
 
-- Namespace Lock：
-- Shard Lock：
+### Namespace Lock
+基于 Dsync + localLocker 封装，用于管理对 Object 的锁。Namespace Lock 实现以下接口：
+```go
+// RWLocker - locker interface to introduce GetRLock, RUnlock.
+type RWLocker interface {
+	GetLock(ctx context.Context, timeout *dynamicTimeout) (lkCtx LockContext, timedOutErr error)
+	Unlock(lkCtx LockContext)
+	GetRLock(ctx context.Context, timeout *dynamicTimeout) (lkCtx LockContext, timedOutErr error)
+	RUnlock(lkCtx LockContext)
+}
+```
+以加锁为例，`GetLock` 返回一个 `LockContext`:
+```go
+// LockContext lock context holds the lock backed context and canceler for the context.
+type LockContext struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+```
+通过该 `Context` 可以获取当前锁是否失去了 quorum 节点的支持。该 `Context` 会在 Dsync 的锁刷新任务中使用，当锁刷新任务失败，会调用 `cancel` 函数，取消该 `Context`。
+
+### Share Lock
+基于 Namespace Lock 封装，使一个实例可以共享一个写锁。这在一些场景下很有用，比如扫描程序只需要在一个实例上运行，而不需要在所有实例上运行，则可以通过这个锁来达到抢主的效果。
+
+```go
+type sharedLock struct {
+	lockContext chan LockContext
+}
+```
+
+一个 Share Lock 会启动一个 `backgroundRoutine` 来保证持续的获取锁，并像所有需要锁的请求转发锁的 `Context`，以此实现共享锁的效果。
+
+```go
+func (ld sharedLock) GetLock(ctx context.Context) (context.Context, context.CancelFunc) {
+	l := <-ld.lockContext
+	return mergeContext(l.Context(), ctx)
+}
+```

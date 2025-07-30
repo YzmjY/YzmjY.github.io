@@ -2,6 +2,7 @@
 date: 2025-07-24
 categories:
   - MinIO
+slug: minio-meta
 draft: false
 ---
 

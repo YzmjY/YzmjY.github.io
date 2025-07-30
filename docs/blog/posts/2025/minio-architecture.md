@@ -2,6 +2,7 @@
 date: 2025-07-22
 categories:
   - MinIO
+slug: minio-architecture
 draft: false
 ---
 

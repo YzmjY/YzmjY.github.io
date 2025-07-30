@@ -170,7 +170,6 @@ STAGE_UNSTAGE_VOLUME capability.
 ```
 
 ### CSI 注册过程
-
 ![](../assert/csi-registrar.png)
 
 ## 参考

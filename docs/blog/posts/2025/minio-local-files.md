@@ -2,6 +2,7 @@
 date: 2025-07-23
 categories:
   - MinIO
+slug: minio-local-files
 draft: false
 ---
 
