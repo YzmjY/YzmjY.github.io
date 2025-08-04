@@ -192,14 +192,22 @@ graph TD
   E --> H[判断是否应该 Compact];
   F --> H;
   H --> I[递归深入 new 集合];
-  I --> J[递归深入 exist 集合];
+  H --> J[递归深入 exist 集合];
   J --> M{父级不是 Compact，且当前 Entry 在上次 Cache 中 Compact};
-  M --Y--> N[16 轮扫描一次，其余跳过]; 
+
   M --N--> K[根据 Compact 处理 Cache 中的父子关系];
+  M --Y--> N[16 轮扫描一次，其余跳过];  
+  I-->K;
   K --> L[返回];
   G --> L[返回];
   N --> L[返回];
 ```
+Compact 会发生在：
+
+- 目录（包含子目录）下包含少于 `dataScannerCompactLeastObject`（500） 个 Object
+- 目录（非 Bucket 层级）包含至少 `dataScannerCompactAtFolders`（2500） 个子目录。
+- 目录只包含 `Object`（完整的 Object 目录，不是指 xl.meta 那一层）没有其他子目录。
+- 目录（包含 Bucket 目录）下包含超过 `dataScannerForceCompactAtFolders` （250_000）个子目录。
 
 ### ScanItem 操作
 上述扫描主逻辑的递归基是发现一个 xl.meta 文件，即一个 ScanItem。在 Scanner 入口处，对每一个 ScanItem 会注册一个回调，回调内部处理各种操作，包括：
