@@ -2,6 +2,7 @@
 date: 2025-06-23
 categories:
   - Kubernetes
+slug: k8s-storage
 draft: false
 ---
 

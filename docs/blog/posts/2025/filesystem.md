@@ -2,6 +2,7 @@
 date: 2025-07-03
 categories:
   - Linux
+slug: filesystem
 draft: false
 ---
 

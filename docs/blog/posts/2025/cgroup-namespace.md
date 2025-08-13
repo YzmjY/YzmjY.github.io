@@ -2,6 +2,7 @@
 date: 2025-07-14
 categories:
   - Linux
+slug: cgroup-namespace
 draft: false
 ---
 
