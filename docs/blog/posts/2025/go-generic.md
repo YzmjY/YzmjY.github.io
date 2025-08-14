@@ -25,6 +25,8 @@ func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
 }
 ```
 
+<!-- more -->
+
 ## Go 泛型介绍
 Go 从 1.18 开始支持泛型。主要包含以下三个大的特性：
 
@@ -101,7 +103,8 @@ type Number interface {
 ### 类型推断
 #### 函数的类型推断
 Go 支持根据函数参数自动推断类型参数，例如：
-```go func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
+```go 
+func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
     var s V
     for _, v := range m {
         s += v
@@ -142,7 +145,7 @@ func ScaleAndPrint(p Point) {
     fmt.Println(r.String()) // DOES NOT COMPILE
 }
 ```
-### 一些限制
+### Tips
 - 类型集中的类型不能有方法。下面的代码是无效的：
     ```go
     type Comparable[T any] interface {
@@ -154,3 +157,12 @@ func ScaleAndPrint(p Point) {
         constraints.Ordered | Comparable[T]
     }
     ```
+- 内置的一些类型约束，可以在 `golang.org/x/exp/constraints` 包中找到。   
+  | 类型约束 | 说明       |
+  | -------- | ---------- |
+  | Signed   | 有符号整数 |
+  | Unsigned | 无符号整数 |
+  | Integer  | 整数       |
+  | Float    | 浮点数     |
+  | Complex  | 复数       |
+  | Ordered  | 有序类型   |
