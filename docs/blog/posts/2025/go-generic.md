@@ -157,7 +157,7 @@ func ScaleAndPrint(p Point) {
         constraints.Ordered | Comparable[T]
     }
     ```
-- 内置的一些类型约束，可以在 `golang.org/x/exp/constraints` 包中找到。   
+- 内置的一些类型约束，可以在 `golang.org/x/exp/constraints` 包中找到。      
   | 类型约束 | 说明       |
   | -------- | ---------- |
   | Signed   | 有符号整数 |
