@@ -12,6 +12,8 @@ draft: false
 /// caption
 ///
 
+<!-- more -->
+
 ## 一个例子
 ```go
 // SumIntsOrFloats sums the values of map m. It supports both int64 and float64
@@ -24,8 +26,6 @@ func SumIntsOrFloats[K comparable, V int64 | float64](m map[K]V) V {
     return s
 }
 ```
-
-<!-- more -->
 
 ## Go 泛型介绍
 Go 从 1.18 开始支持泛型。主要包含以下三个大的特性：
